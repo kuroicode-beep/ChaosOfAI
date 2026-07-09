@@ -34,8 +34,11 @@ namespace ChaosOfAI.Combat
         {
             float dur = heavy ? BalanceConstants.HeavyHitStopSeconds : BalanceConstants.HitStopSeconds;
             Engine.TimeScale = 0.0001f; // 완전 0은 일부 처리 이슈 → 극소값
-            // 실제 경과(TimeScale 무시)를 기다리기 위해 ProcessAlways 타이머 사용
-            await ToSignal(GetTree().CreateTimer(dur, processAlways: true), SceneTreeTimer.SignalName.Timeout);
+            // 실제 경과(TimeScale 무시)를 기다려야 하므로 ignoreTimeScale:true 필수.
+            // (아니면 TimeScale≈0에 타이머가 스케일링돼 사실상 멈춤)
+            await ToSignal(
+                GetTree().CreateTimer(dur, processAlways: true, processInPhysics: false, ignoreTimeScale: true),
+                SceneTreeTimer.SignalName.Timeout);
             Engine.TimeScale = 1f;
         }
 
