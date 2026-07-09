@@ -1,11 +1,13 @@
 // tests/CombatSmokeTest.cs
 // 엔진 통합 스모크 테스트: DamageCalculatorTests(순수 로직)와 달리 실제 Area3D/물리/
-// NavigationAgent3D/EnemyAI 상태머신을 구동해 "Enemy가 Player를 실제로 때릴 수 있는가"를 검증한다.
-// Enemy를 AttackRange 안에서 시작시켜 내비게이션 베이크 없이도 Idle→Chase→Attack 전이를 즉시 유도.
+// NavigationAgent3D/EnemyAI 상태머신을 구동해 검증한다.
+//   Phase 1: Enemy가 Player를 실제로 때릴 수 있는가(AttackRange 안에서 시작 → 즉시 Attack 전이).
+//   Phase 2: Enemy를 처치했을 때 Die()→GrantRewardsToPlayer()(XP 지급/드랍)가 예외 없이 도는가.
 // --headless 자동화: 결과를 GD.Print 후 종료(0=성공, 1=실패/타임아웃).
 
 using Godot;
 using ChaosOfAI.Actors;
+using ChaosOfAI.Combat;
 
 namespace ChaosOfAI.Tests
 {
@@ -19,6 +21,9 @@ namespace ChaosOfAI.Tests
         private float _elapsed;
         private const float TimeoutSeconds = 8f;
         private float _startHp = -1f;
+        private bool _hitConfirmed;
+        private bool _killTriggered;
+        private int _framesSinceKill;
         private bool _finished;
 
         public override void _Ready()
@@ -43,16 +48,45 @@ namespace ChaosOfAI.Tests
 
             if (_startHp < 0f) _startHp = _player.Stats.CurrentHp;
 
-            bool damaged = _player.Stats.CurrentHp < _startHp;
-            bool timeout = _elapsed >= TimeoutSeconds;
-
-            if (damaged || timeout)
+            // ── Phase 1: Enemy가 Player를 실제로 명중시키는가 ──
+            if (!_hitConfirmed)
             {
-                _finished = true;
-                GD.Print($"[CombatSmokeTest] {(damaged ? "PASS" : "FAIL")} " +
-                    $"enemyState={_enemy.State} playerHp={_player.Stats.CurrentHp:F1}/{_player.Stats.MaxHp:F1} elapsed={_elapsed:F1}s");
-                GetTree().Quit(damaged ? 0 : 1);
+                if (_player.Stats.CurrentHp < _startHp)
+                {
+                    _hitConfirmed = true;
+                }
+                else if (_elapsed >= TimeoutSeconds)
+                {
+                    Finish(false, "Phase1(피격) 타임아웃");
+                    return;
+                }
+                return;
             }
+
+            // ── Phase 2: 처치 → Die()→GrantRewardsToPlayer() 엔진 경로 검증 ──
+            if (!_killTriggered)
+            {
+                _enemy.ReceiveHit(new DamageResult(true, false, 999999f), Vector3.Forward, 0f);
+                _killTriggered = true;
+                _framesSinceKill = 0;
+                return;
+            }
+
+            _framesSinceKill++;
+            if (_framesSinceKill < 2) return; // QueueFree가 프레임 말미에 처리되도록 한 프레임 대기
+
+            bool enemyFreed = !IsInstanceValid(_enemy);
+            bool xpGranted = _player.Progression.CurrentXp > 0 || _player.Stats.Level > 1;
+            bool pass = enemyFreed && xpGranted;
+
+            Finish(pass, $"enemyFreed={enemyFreed} xp={_player.Progression.CurrentXp} level={_player.Stats.Level} inv={_player.Inventory.Count}");
+        }
+
+        private void Finish(bool pass, string detail)
+        {
+            _finished = true;
+            GD.Print($"[CombatSmokeTest] {(pass ? "PASS" : "FAIL")} {detail} elapsed={_elapsed:F1}s");
+            GetTree().Quit(pass ? 0 : 1);
         }
     }
 }

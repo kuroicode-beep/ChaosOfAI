@@ -53,5 +53,9 @@ namespace ChaosOfAI.Combat
         // ── 레벨업 (§5.5) ─────────────────────────────────
         public const int StatPointsPerLevel = 5;
         public const int SkillPointsPerLevel = 1;
+
+        // 경험치 곡선: 다음 레벨까지 필요 XP = Base + (Level-1)·Growth. 초기값, 실플레이 후 튜닝 대상.
+        public const int XpCurveBase = 20;
+        public const int XpCurveGrowth = 15;
     }
 }

@@ -14,6 +14,8 @@ namespace ChaosOfAI.UI
         private Label _versionLabel = null!;
         private ProgressBar _hpOrb = null!;
         private ProgressBar _mpOrb = null!;
+        private Label _levelLabel = null!;
+        private Label _statPointsLabel = null!;
         private Control _settingsPanel = null!;
         private RichTextLabel _historyText = null!;
 
@@ -23,6 +25,8 @@ namespace ChaosOfAI.UI
             _versionLabel = GetNode<Label>("VersionLabel");
             _hpOrb = GetNode<ProgressBar>("Vitals/HpOrb");
             _mpOrb = GetNode<ProgressBar>("Vitals/MpOrb");
+            _levelLabel = GetNode<Label>("Vitals/LevelLabel");
+            _statPointsLabel = GetNode<Label>("Vitals/StatPointsLabel");
             _settingsPanel = GetNode<Control>("SettingsPanel");
             _historyText = GetNode<RichTextLabel>("SettingsPanel/HistoryText");
 
@@ -42,6 +46,15 @@ namespace ChaosOfAI.UI
         {
             _hpOrb.MaxValue = maxHp; _hpOrb.Value = hp;
             _mpOrb.MaxValue = maxMp; _mpOrb.Value = mp;
+        }
+
+        /// <summary>M3: 레벨/경험치/미배분 포인트 표시(§5.5 진행 루프 체감용, 그레이박스 텍스트 표기).</summary>
+        public void UpdateProgression(int level, int xp, int xpToNext, int statPoints, int skillPoints)
+        {
+            _levelLabel.Text = $"Lv.{level}  XP {xp}/{xpToNext}";
+            _statPointsLabel.Text = statPoints > 0
+                ? $"스탯 포인트 {statPoints} (4=STR 5=DEX 6=VIT 7=ENE) · 스킬 포인트 {skillPoints}"
+                : $"스킬 포인트 {skillPoints}";
         }
 
         private static string BuildHistoryText()

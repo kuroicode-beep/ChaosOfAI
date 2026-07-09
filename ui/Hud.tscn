@@ -34,13 +34,13 @@ offset_right = 180.0
 offset_bottom = 48.0
 theme_override_font_sizes/font_size = 22
 theme_override_colors/font_color = Color(1, 1, 1, 1)
-text = "v0.2.0"
+text = "v0.3.0"
 
 [node name="Vitals" type="Control" parent="."]
 offset_left = 16.0
 offset_top = 54.0
-offset_right = 300.0
-offset_bottom = 110.0
+offset_right = 460.0
+offset_bottom = 150.0
 
 [node name="HpOrb" type="ProgressBar" parent="Vitals"]
 offset_right = 284.0
@@ -62,6 +62,23 @@ value = 100.0
 show_percentage = false
 theme_override_styles/background = SubResource("StyleBoxFlat_bgorb")
 theme_override_styles/fill = SubResource("StyleBoxFlat_mp")
+
+; M3 진행 루프 표시(그레이박스 텍스트, §5.5). 접근성: 최소 폰트 16px 이상 유지.
+[node name="LevelLabel" type="Label" parent="Vitals"]
+offset_top = 64.0
+offset_right = 440.0
+offset_bottom = 88.0
+theme_override_font_sizes/font_size = 18
+theme_override_colors/font_color = Color(1, 1, 1, 1)
+text = "Lv.1  XP 0/20"
+
+[node name="StatPointsLabel" type="Label" parent="Vitals"]
+offset_top = 92.0
+offset_right = 440.0
+offset_bottom = 116.0
+theme_override_font_sizes/font_size = 16
+theme_override_colors/font_color = Color(0.85, 0.9, 1, 1)
+text = "스킬 포인트 0"
 
 [node name="SettingsPanel" type="Control" parent="."]
 visible = false

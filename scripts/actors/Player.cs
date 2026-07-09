@@ -26,13 +26,18 @@ namespace ChaosOfAI.Actors
         private readonly Random _rng = new();
 
         private CombatStats _stats = null!;
+        private PlayerProgression _progression = null!;
 
         // 공격 상태 머신(간이)
         private SkillData? _activeSkill;
         private float _attackTimer;
         private bool _windowOpen;
 
+        // M4(간소화): 그리드/장착 UI 없이 습득 아이템 목록만 보유, 보너스는 즉시 적용(§ 아키텍처 노트).
+        public readonly System.Collections.Generic.List<ItemData> Inventory = new();
+
         public CombatStats Stats => _stats;
+        public PlayerProgression Progression => _progression;
         public bool IsAlive => _stats?.IsAlive ?? true;
 
         public override void _Ready()
@@ -45,6 +50,7 @@ namespace ChaosOfAI.Actors
 
             // 격투가 초기 스탯: STR/VIT 중심(§3)
             _stats = new CombatStats(1, new PrimaryAttributes(str: 25, dex: 15, vit: 20, ene: 10));
+            _progression = new PlayerProgression(_stats);
 
             // 스킬 .tres 미할당 시 코드 폴백(SkillLibrary)으로 M1 검증 가능하게
             StrikeSkill ??= SkillLibrary.Strike();
@@ -65,6 +71,28 @@ namespace ChaosOfAI.Actors
                 BeginAttack(CrushSkill);
             else if (Input.IsActionJustPressed("skill_spin"))
                 BeginAttack(SpinSkill);
+            else if (Input.IsActionJustPressed("alloc_str"))
+                _progression.SpendStatPoint(StatKind.Strength);
+            else if (Input.IsActionJustPressed("alloc_dex"))
+                _progression.SpendStatPoint(StatKind.Dexterity);
+            else if (Input.IsActionJustPressed("alloc_vit"))
+                _progression.SpendStatPoint(StatKind.Vitality);
+            else if (Input.IsActionJustPressed("alloc_ene"))
+                _progression.SpendStatPoint(StatKind.Energy);
+        }
+
+        /// <summary>아이템 습득(M4 간소화): 목록에 추가 + 접사를 CombatStats.Equipment에 즉시 합산.</summary>
+        public void PickupItem(ItemData item)
+        {
+            Inventory.Add(item);
+            var eq = _stats.Equipment;
+            eq.BonusStrength += item.BonusStrength;
+            eq.FlatDefense += item.BonusDefense;
+            eq.FlatAttackRating += item.BonusAttackRating;
+            eq.FlatMaxHp += item.BonusMaxHp;
+            eq.FlatMinDamage += item.BonusMinDamage;
+            eq.FlatMaxDamage += item.BonusMaxDamage;
+            _stats.Equipment = eq;
         }
 
         // 화면 클릭 → 지면(y=0 평면) 교차점으로 이동 목표 설정(M0).
@@ -230,6 +258,8 @@ namespace ChaosOfAI.Actors
         {
             _hud ??= GetTree().GetFirstNodeInGroup("hud") as Hud;
             _hud?.UpdateVitals(_stats.CurrentHp, _stats.MaxHp, _stats.CurrentMp, _stats.MaxMp);
+            _hud?.UpdateProgression(_stats.Level, _progression.CurrentXp, _progression.XpToNextLevel,
+                _progression.UnspentStatPoints, _progression.UnspentSkillPoints);
         }
     }
 }

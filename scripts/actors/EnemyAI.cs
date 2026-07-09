@@ -92,8 +92,20 @@ namespace ChaosOfAI.Actors
         {
             State = EnemyState.Dead;
             EmitSignal(SignalName.Died);
-            // TODO(Sonnet): 사망 연출 후 드랍(_data.DropChance)/경험치(_data.XpReward), QueueFree.
+            GrantRewardsToPlayer(); // M3/M4: 경험치 + 드랍(간소화, 즉시 장비 적용)
+            // TODO(Sonnet): 사망 연출(아트 자산 필요).
             QueueFree();
+        }
+
+        private void GrantRewardsToPlayer()
+        {
+            if (_player is not Player player) return;
+
+            player.Progression.GrantXp(_data.XpReward);
+
+            var loot = LootTable.Roll(_data.DropChance, _rng);
+            if (loot != null)
+                player.PickupItem(loot);
         }
 
         // ── AI 상태머신 (M2) ────────────────────────────────

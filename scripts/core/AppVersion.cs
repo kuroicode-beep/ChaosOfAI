@@ -20,11 +20,18 @@ namespace ChaosOfAI.Core
     public static class AppVersion
     {
         // 루트 VERSION 파일과 항상 일치시킨다.
-        public const string Current = "0.2.0";
+        public const string Current = "0.3.0";
 
         /// <summary>최신이 앞. 설정 → 업데이트 내역에서 그대로 노출.</summary>
         public static readonly IReadOnlyList<VersionEntry> History = new List<VersionEntry>
         {
+            new VersionEntry("0.3.0", "2026-07-10", new[]
+            {
+                "M3 경험치/레벨업(PlayerProgression) + 스탯 포인트 분배(4/5/6/7키) 구현.",
+                "M4 아이템 드랍/장비 보너스(간소화: 그리드 UI 없이 처치 즉시 적용) 구현.",
+                "HUD에 레벨·XP·포인트 표시 추가.",
+                "headless 회귀 테스트 3종(로직 9건 + 진행루프 14건 + 전투 통합 2단계) 전부 통과.",
+            }),
             new VersionEntry("0.2.0", "2026-07-10", new[]
             {
                 "M0~M1 씬 구성(Player/Enemy/Main) + 등각 카메라 + 런타임 내비 베이크.",
