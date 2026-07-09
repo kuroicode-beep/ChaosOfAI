@@ -1,0 +1,22 @@
+# Godot / C# 프로젝트 정규화
+* text=auto eol=lf
+
+# Godot 텍스트 리소스
+*.tscn text eol=lf
+*.tres text eol=lf
+*.godot text eol=lf
+*.cfg text eol=lf
+
+# C#
+*.cs text eol=lf diff=csharp
+*.csproj text eol=lf
+*.sln text eol=crlf
+
+# 바이너리
+*.png binary
+*.jpg binary
+*.webp binary
+*.ogg binary
+*.wav binary
+*.glb binary
+*.gltf binary
