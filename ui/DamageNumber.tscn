@@ -1,0 +1,15 @@
+[gd_scene load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://ui/DamageNumber.cs" id="1"]
+
+[node name="DamageNumber" type="Node3D"]
+script = ExtResource("1")
+
+[node name="Label3D" type="Label3D" parent="."]
+billboard = 1
+no_depth_test = true
+font_size = 32
+outline_size = 12
+modulate = Color(1, 1, 1, 1)
+outline_modulate = Color(0, 0, 0, 1)
+text = "0"

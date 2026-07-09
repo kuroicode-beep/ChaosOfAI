@@ -9,10 +9,10 @@ namespace ChaosOfAI.Combat
 {
     public partial class CombatFeedback : Node
     {
-        public static CombatFeedback Instance { get; private set; }
+        public static CombatFeedback? Instance { get; private set; }
 
         // 카메라 셰이크 대상은 활성 카메라가 등록. Player가 시작 시 등록.
-        private Camera3D _camera;
+        private Camera3D? _camera;
         private float _shakeAmount;
         private float _shakeDecay = 8f;
         private Vector3 _cameraBasePos;
@@ -23,7 +23,7 @@ namespace ChaosOfAI.Combat
             ProcessMode = ProcessModeEnum.Always; // 히트스톱(TimeScale=0) 중에도 동작
         }
 
-        public void RegisterCamera(Camera3D cam)
+        public void RegisterCamera(Camera3D? cam)
         {
             _camera = cam;
             if (cam != null) _cameraBasePos = cam.Position;

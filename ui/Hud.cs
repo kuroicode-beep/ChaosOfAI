@@ -1,7 +1,9 @@
 // ui/Hud.cs
-// HUD 스켈레톤(§6). 체력(빨강)·마나(파랑) 구슬 + 상시 버전 표시(전역 규칙: 화면 상단 모서리 vX.Y.Z).
-// Sonnet 확장 지점: 구슬 채움 셰이더/텍스처, 스킬 슬롯, 설정 → "업데이트 내역" 화면(AppVersion.History 렌더).
+// HUD(§6): 체력(빨강)·마나(파랑) 구슬 + 상시 버전 표시(전역 규칙: 화면 상단 모서리 vX.Y.Z).
+// 설정 패널에 "업데이트 내역"(전역 규칙: AppVersion.History를 최신순으로 앱 안에서 바로 확인).
+// toggle_settings(Esc)로 패널 토글. 씬 기대치: Hud.tscn 노드 트리 주석 참고.
 
+using System.Text;
 using Godot;
 using ChaosOfAI.Core;
 
@@ -9,21 +11,50 @@ namespace ChaosOfAI.UI
 {
     public partial class Hud : CanvasLayer
     {
-        [Export] public Label VersionLabel;   // 화면 상단 모서리
-        [Export] public TextureProgressBar HpOrb;
-        [Export] public TextureProgressBar MpOrb;
+        private Label _versionLabel = null!;
+        private ProgressBar _hpOrb = null!;
+        private ProgressBar _mpOrb = null!;
+        private Control _settingsPanel = null!;
+        private RichTextLabel _historyText = null!;
 
         public override void _Ready()
         {
-            if (VersionLabel != null)
-                VersionLabel.Text = $"v{AppVersion.Current}";
+            AddToGroup("hud"); // Player가 그룹으로 탐지해 UpdateVitals 호출
+            _versionLabel = GetNode<Label>("VersionLabel");
+            _hpOrb = GetNode<ProgressBar>("Vitals/HpOrb");
+            _mpOrb = GetNode<ProgressBar>("Vitals/MpOrb");
+            _settingsPanel = GetNode<Control>("SettingsPanel");
+            _historyText = GetNode<RichTextLabel>("SettingsPanel/HistoryText");
+
+            _versionLabel.Text = $"v{AppVersion.Current}";
+            _historyText.Text = BuildHistoryText();
+            _settingsPanel.Visible = false;
+        }
+
+        public override void _UnhandledInput(InputEvent @event)
+        {
+            if (Input.IsActionJustPressed("toggle_settings"))
+                _settingsPanel.Visible = !_settingsPanel.Visible;
         }
 
         /// <summary>매 프레임 또는 스탯 변경 시 호출해 구슬을 갱신.</summary>
         public void UpdateVitals(float hp, float maxHp, float mp, float maxMp)
         {
-            if (HpOrb != null) { HpOrb.MaxValue = maxHp; HpOrb.Value = hp; }
-            if (MpOrb != null) { MpOrb.MaxValue = maxMp; MpOrb.Value = mp; }
+            _hpOrb.MaxValue = maxHp; _hpOrb.Value = hp;
+            _mpOrb.MaxValue = maxMp; _mpOrb.Value = mp;
+        }
+
+        private static string BuildHistoryText()
+        {
+            var sb = new StringBuilder();
+            foreach (var entry in AppVersion.History)
+            {
+                sb.Append("[b]v").Append(entry.Version).Append("[/b]  ").Append(entry.Date).Append('\n');
+                foreach (var line in entry.Summary)
+                    sb.Append("- ").Append(line).Append('\n');
+                sb.Append('\n');
+            }
+            return sb.ToString();
         }
     }
 }

@@ -1,0 +1,22 @@
+[gd_resource type="Resource" script_class="EnemyData" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/resources/EnemyData.cs" id="1_walker"]
+
+[resource]
+script = ExtResource("1_walker")
+Id = "rust_walker"
+DisplayName = "녹슨 보행기"
+Level = 2
+Strength = 16
+Dexterity = 6
+Vitality = 22
+Energy = 0
+MinDamage = 5
+MaxDamage = 10
+AttackCooldown = 1.6
+AttackRange = 2.0
+DamageReduction = 0.1
+MoveSpeed = 2.0
+DetectionRange = 7.0
+XpReward = 18
+DropChance = 0.3

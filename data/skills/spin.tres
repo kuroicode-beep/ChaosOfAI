@@ -1,0 +1,19 @@
+[gd_resource type="Resource" script_class="SkillData" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/resources/SkillData.cs" id="1_spin"]
+
+[resource]
+script = ExtResource("1_spin")
+Id = "spin"
+DisplayName = "회전 격돌"
+Description = "주위 광역 회전 타격, 이동하며 지속. (디아2 Whirlwind 맛보기, MVP는 축소판)"
+Targeting = 1
+DamageMultiplier = 0.4
+ManaCost = 6.0
+RangeOverride = 2.6
+ConeHalfAngleOverride = 180.0
+KnockbackScale = 0.6
+HeavyHitStop = false
+ActiveWindowStart = 0.05
+ActiveWindowEnd = 0.55
+Cooldown = 0.2

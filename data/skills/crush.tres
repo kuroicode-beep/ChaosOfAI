@@ -1,0 +1,19 @@
+[gd_resource type="Resource" script_class="SkillData" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/resources/SkillData.cs" id="1_crush"]
+
+[resource]
+script = ExtResource("1_crush")
+Id = "crush"
+DisplayName = "분쇄"
+Description = "강한 단일 타격 + 넉백 + 데미지 배율. (디아2 Bash류)"
+Targeting = 0
+DamageMultiplier = 0.8
+ManaCost = 3.0
+RangeOverride = 2.0
+ConeHalfAngleOverride = 35.0
+KnockbackScale = 2.2
+HeavyHitStop = true
+ActiveWindowStart = 0.14
+ActiveWindowEnd = 0.22
+Cooldown = 0.35

@@ -8,7 +8,7 @@ namespace ChaosOfAI.UI
 {
     public partial class DamageNumber : Node3D
     {
-        [Export] public Label3D Label; // 자식 Label3D (외곽선 설정된)
+        [Export] public Label3D? Label; // 자식 Label3D (외곽선 설정된)
 
         private float _lifetime = 0.8f;
         private float _age;

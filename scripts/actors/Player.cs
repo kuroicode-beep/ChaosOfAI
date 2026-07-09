@@ -7,26 +7,28 @@ using System;
 using Godot;
 using ChaosOfAI.Combat;
 using ChaosOfAI.Resources;
+using ChaosOfAI.UI;
 
 namespace ChaosOfAI.Actors
 {
     public partial class Player : CharacterBody3D, IDamageable
     {
         [Export] public float MoveSpeed = 5.0f;
-        [Export] public SkillData StrikeSkill;   // data/skills/strike.tres
-        [Export] public SkillData CrushSkill;    // data/skills/crush.tres
-        [Export] public SkillData SpinSkill;     // data/skills/spin.tres
-        [Export] public NodePath CameraPath;
+        [Export] public SkillData? StrikeSkill;   // data/skills/strike.tres
+        [Export] public SkillData? CrushSkill;    // data/skills/crush.tres
+        [Export] public SkillData? SpinSkill;     // data/skills/spin.tres
+        [Export] public NodePath CameraPath = new();
 
-        private NavigationAgent3D _nav;
-        private MeleeHitbox _hitbox;
-        private Camera3D _camera;
+        // Godot 노드 참조는 _Ready()에서 GetNode로 확정 초기화됨(null! 관용구).
+        private NavigationAgent3D _nav = null!;
+        private MeleeHitbox _hitbox = null!;
+        private Camera3D? _camera;
         private readonly Random _rng = new();
 
-        private CombatStats _stats;
+        private CombatStats _stats = null!;
 
         // 공격 상태 머신(간이)
-        private SkillData _activeSkill;
+        private SkillData? _activeSkill;
         private float _attackTimer;
         private bool _windowOpen;
 
@@ -35,6 +37,7 @@ namespace ChaosOfAI.Actors
 
         public override void _Ready()
         {
+            AddToGroup("player"); // EnemyAI가 그룹으로 탐지(§ M2)
             _nav = GetNode<NavigationAgent3D>("NavigationAgent3D");
             _hitbox = GetNode<MeleeHitbox>("MeleeHitbox");
             if (CameraPath != null && !CameraPath.IsEmpty)
@@ -82,6 +85,7 @@ namespace ChaosOfAI.Actors
         {
             HandleAttack(delta);
             HandleMovement();
+            SyncHud();
         }
 
         private void HandleMovement()
@@ -103,7 +107,7 @@ namespace ChaosOfAI.Actors
             MoveAndSlide();
         }
 
-        private void BeginAttack(SkillData skill)
+        private void BeginAttack(SkillData? skill)
         {
             if (skill == null || _activeSkill != null) return; // 이미 공격 중이면 무시(간이)
             if (!_stats.SpendMp(skill.ManaCost)) return;
@@ -209,9 +213,23 @@ namespace ChaosOfAI.Actors
 
         public void ReceiveHit(in DamageResult result, Vector3 knockbackDir, float knockbackStrength)
         {
-            if (!result.Hit) return;
+            if (!result.Hit)
+            {
+                DamageNumberSpawner.Instance?.Spawn(GlobalPosition, 0f, false, miss: true);
+                return;
+            }
             _stats.ApplyDamage(result.Amount);
-            // TODO(Sonnet): 피격 이펙트/사운드, HUD 체력 갱신, 사망 처리.
+            DamageNumberSpawner.Instance?.Spawn(GlobalPosition, result.Amount, result.IsCritical, miss: false);
+            // TODO(Sonnet): 피격 이펙트/사운드, 사망 시 게임오버 화면(아트 자산 필요).
+        }
+
+        // ── HUD 연동 ─────────────────────────────────────
+        private Hud? _hud;
+
+        private void SyncHud()
+        {
+            _hud ??= GetTree().GetFirstNodeInGroup("hud") as Hud;
+            _hud?.UpdateVitals(_stats.CurrentHp, _stats.MaxHp, _stats.CurrentMp, _stats.MaxMp);
         }
     }
 }

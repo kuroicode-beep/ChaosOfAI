@@ -37,6 +37,11 @@ namespace ChaosOfAI.Combat
         public const float ArPerDex = 5f;         // DEX 1당 AR +5
         public const int BaseAttackRating = 20;
 
+        // ── 몬스터 공격 판정 (M2) ─────────────────────────
+        // Area3D.Monitoring을 켠 직후 같은 물리 프레임엔 겹침 목록이 비어있으므로(물리 서버가
+        // 다음 스텝에서 갱신), 여러 프레임에 걸쳐 판정 윈도를 유지해야 실제 명중이 성립한다.
+        public const float EnemyAttackWindowSeconds = 0.15f;
+
         // ── 타격감 (§4.3) ─────────────────────────────────
         // 히트스톱: 타격 성립 시 정지 프레임(초). 강타/처치에서 강조.
         public const float HitStopSeconds = 0.06f;

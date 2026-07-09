@@ -1,0 +1,22 @@
+[gd_resource type="Resource" script_class="EnemyData" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/resources/EnemyData.cs" id="1_drone"]
+
+[resource]
+script = ExtResource("1_drone")
+Id = "glitch_drone"
+DisplayName = "글리치 드론"
+Level = 1
+Strength = 8
+Dexterity = 12
+Vitality = 10
+Energy = 0
+MinDamage = 2
+MaxDamage = 5
+AttackCooldown = 1.0
+AttackRange = 1.8
+DamageReduction = 0.0
+MoveSpeed = 3.4
+DetectionRange = 9.0
+XpReward = 8
+DropChance = 0.15

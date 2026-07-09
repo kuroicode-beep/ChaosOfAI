@@ -13,7 +13,15 @@ namespace ChaosOfAI.Tests
     {
         private int _pass, _fail;
 
-        public override void _Ready() => RunAll();
+        // --headless 자동화 실행 시 결과 출력 후 즉시 종료(0=전부 통과, 1=실패 있음).
+        [Export] public bool QuitOnFinish = false;
+
+        public override void _Ready()
+        {
+            RunAll();
+            if (QuitOnFinish)
+                GetTree().Quit(_fail == 0 ? 0 : 1);
+        }
 
         public void RunAll()
         {
