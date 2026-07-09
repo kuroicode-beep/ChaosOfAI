@@ -18,6 +18,7 @@ namespace ChaosOfAI.UI
         private Label _statPointsLabel = null!;
         private Control _settingsPanel = null!;
         private RichTextLabel _historyText = null!;
+        private Control _deathPanel = null!;
 
         public override void _Ready()
         {
@@ -29,11 +30,16 @@ namespace ChaosOfAI.UI
             _statPointsLabel = GetNode<Label>("Vitals/StatPointsLabel");
             _settingsPanel = GetNode<Control>("SettingsPanel");
             _historyText = GetNode<RichTextLabel>("SettingsPanel/HistoryText");
+            _deathPanel = GetNode<Control>("DeathPanel");
 
             _versionLabel.Text = $"v{AppVersion.Current}";
             _historyText.Text = BuildHistoryText();
             _settingsPanel.Visible = false;
+            _deathPanel.Visible = false;
         }
+
+        /// <summary>플레이어 사망 시 오버레이 표시(§ 발견1 수정). R키 재시작 안내는 씬 리로드로 처리.</summary>
+        public void ShowDeath() => _deathPanel.Visible = true;
 
         public override void _UnhandledInput(InputEvent @event)
         {

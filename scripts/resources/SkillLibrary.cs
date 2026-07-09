@@ -29,7 +29,7 @@ namespace ChaosOfAI.Resources
             ActiveWindowStart = 0.14f, ActiveWindowEnd = 0.22f, Cooldown = 0.35f,
         };
 
-        // 3) 회전 격돌: 주위 광역 회전(디아2 Whirlwind 축소판).
+        // 3) 회전 격돌: 주위 광역 회전(디아2 Whirlwind 축소판). 이동하며 지속 타격.
         public static SkillData Spin() => new SkillData
         {
             Id = "spin", DisplayName = "회전 격돌",
@@ -38,6 +38,7 @@ namespace ChaosOfAI.Resources
             RangeOverride = 2.6f, ConeHalfAngleOverride = 180f, // 전방위
             KnockbackScale = 0.6f, HeavyHitStop = false,
             ActiveWindowStart = 0.05f, ActiveWindowEnd = 0.55f, Cooldown = 0.2f,
+            RehitInterval = 0.2f, AllowMoveWhileActive = true, // 이동하며 0.2초마다 재타격
         };
     }
 }

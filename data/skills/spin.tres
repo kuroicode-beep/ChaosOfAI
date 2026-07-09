@@ -16,4 +16,6 @@ KnockbackScale = 0.6
 HeavyHitStop = false
 ActiveWindowStart = 0.05
 ActiveWindowEnd = 0.55
+RehitInterval = 0.2
+AllowMoveWhileActive = true
 Cooldown = 0.2

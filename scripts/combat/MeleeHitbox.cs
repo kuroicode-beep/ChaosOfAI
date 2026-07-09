@@ -37,6 +37,9 @@ namespace ChaosOfAI.Combat
             Monitoring = false;
         }
 
+        /// <summary>다단타: 히트 캐시만 비워 같은 대상을 다시 때릴 수 있게 한다(스윙은 유지).</summary>
+        public void ResetHitCache() => _hitThisSwing.Clear();
+
         /// <summary>
         /// 타격 프레임에서 호출. 부채꼴 안의 유효 대상을 수집→데미지 적용하고 결과 목록을 반환한다.
         /// attacker의 -Z(정면)를 전방으로 사용.

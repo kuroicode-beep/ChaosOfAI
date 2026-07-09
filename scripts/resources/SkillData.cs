@@ -37,6 +37,13 @@ namespace ChaosOfAI.Resources
         [Export] public float ActiveWindowStart { get; set; } = 0.1f;
         [Export] public float ActiveWindowEnd { get; set; } = 0.2f;
 
+        // 다단타 간격(초): 0 = 한 스윙에 대상당 1회만. >0 이면 이 간격마다 히트 캐시를 리셋해
+        // 지속 타격(회전 격돌 등)을 표현. RadialAoe 스킬에서 주로 사용.
+        [Export] public float RehitInterval { get; set; } = 0f;
+
+        // true면 액티브 윈도 동안 이동 허용(회전 격돌처럼 "이동하며 지속"). false면 스윙에 고정.
+        [Export] public bool AllowMoveWhileActive { get; set; } = false;
+
         // 후딜/쿨다운
         [Export] public float Cooldown { get; set; } = 0f;
     }

@@ -1,7 +1,7 @@
 // scripts/actors/Player.cs
-// 격투가 플레이어. M0(클릭 이동) + M1(근접 공격 파이프라인) 뼈대.
+// 격투가 플레이어. M0(클릭 이동) + M1(근접 공격 파이프라인) + M3/M4(진행/장비) 통합.
 // 씬 구성 기대치(자식 노드): NavigationAgent3D, MeleeHitbox, (AnimationPlayer는 아트 단계에서 추가).
-// Sonnet 확장 지점: 애니메이션 연동, 스킬 3종 분기, 스탯/레벨업 UI 반영.
+// Sonnet 확장 지점: 애니메이션 연동, 스탯/레벨업 UI 시각화.
 
 using System;
 using Godot;
@@ -28,17 +28,24 @@ namespace ChaosOfAI.Actors
         private CombatStats _stats = null!;
         private PlayerProgression _progression = null!;
 
+        // 히트박스 씬 기본 형상(오버라이드 복원용) — 스킬이 override를 0으로 두면 이 값으로 되돌린다.
+        private float _defaultRange;
+        private float _defaultConeHalfAngle;
+
         // 공격 상태 머신(간이)
         private SkillData? _activeSkill;
         private float _attackTimer;
         private bool _windowOpen;
+        private float _rehitTimer; // 다단타(RehitInterval) 누적 타이머
+
+        private bool _dead;
 
         // M4(간소화): 그리드/장착 UI 없이 습득 아이템 목록만 보유, 보너스는 즉시 적용(§ 아키텍처 노트).
         public readonly System.Collections.Generic.List<ItemData> Inventory = new();
 
         public CombatStats Stats => _stats;
         public PlayerProgression Progression => _progression;
-        public bool IsAlive => _stats?.IsAlive ?? true;
+        public bool IsAlive => !_dead && (_stats?.IsAlive ?? true);
 
         public override void _Ready()
         {
@@ -47,6 +54,9 @@ namespace ChaosOfAI.Actors
             _hitbox = GetNode<MeleeHitbox>("MeleeHitbox");
             if (CameraPath != null && !CameraPath.IsEmpty)
                 _camera = GetNode<Camera3D>(CameraPath);
+
+            _defaultRange = _hitbox.Range;
+            _defaultConeHalfAngle = _hitbox.ConeHalfAngleDeg;
 
             // 격투가 초기 스탯: STR/VIT 중심(§3)
             _stats = new CombatStats(1, new PrimaryAttributes(str: 25, dex: 15, vit: 20, ene: 10));
@@ -63,22 +73,25 @@ namespace ChaosOfAI.Actors
 
         public override void _UnhandledInput(InputEvent @event)
         {
-            if (Input.IsActionJustPressed("click_move"))
-                MoveToMouse();
-            else if (Input.IsActionJustPressed("skill_strike"))
-                BeginAttack(StrikeSkill);
-            else if (Input.IsActionJustPressed("skill_crush"))
-                BeginAttack(CrushSkill);
-            else if (Input.IsActionJustPressed("skill_spin"))
-                BeginAttack(SpinSkill);
-            else if (Input.IsActionJustPressed("alloc_str"))
-                _progression.SpendStatPoint(StatKind.Strength);
-            else if (Input.IsActionJustPressed("alloc_dex"))
-                _progression.SpendStatPoint(StatKind.Dexterity);
-            else if (Input.IsActionJustPressed("alloc_vit"))
-                _progression.SpendStatPoint(StatKind.Vitality);
-            else if (Input.IsActionJustPressed("alloc_ene"))
-                _progression.SpendStatPoint(StatKind.Energy);
+            // 사망 상태: 재시작 입력만 받는다.
+            if (_dead)
+            {
+                if (@event.IsActionPressed("restart"))
+                    GetTree().ReloadCurrentScene();
+                return;
+            }
+
+            if (@event.IsActionPressed("click_move")) MoveToMouse();
+            else if (@event.IsActionPressed("skill_strike")) BeginAttack(StrikeSkill);
+            else if (@event.IsActionPressed("skill_crush")) BeginAttack(CrushSkill);
+            else if (@event.IsActionPressed("skill_spin")) BeginAttack(SpinSkill);
+            else if (@event.IsActionPressed("alloc_str")) _progression.SpendStatPoint(StatKind.Strength);
+            else if (@event.IsActionPressed("alloc_dex")) _progression.SpendStatPoint(StatKind.Dexterity);
+            else if (@event.IsActionPressed("alloc_vit")) _progression.SpendStatPoint(StatKind.Vitality);
+            else if (@event.IsActionPressed("alloc_ene")) _progression.SpendStatPoint(StatKind.Energy);
+            else return;
+
+            GetViewport().SetInputAsHandled();
         }
 
         /// <summary>아이템 습득(M4 간소화): 목록에 추가 + 접사를 CombatStats.Equipment에 즉시 합산.</summary>
@@ -99,18 +112,13 @@ namespace ChaosOfAI.Actors
         private void MoveToMouse()
         {
             if (_camera == null) return;
-            Vector2 mouse = GetViewport().GetMousePosition();
-            Vector3 from = _camera.ProjectRayOrigin(mouse);
-            Vector3 dir = _camera.ProjectRayNormal(mouse);
-            if (Mathf.IsZeroApprox(dir.Y)) return;
-            float t = -from.Y / dir.Y; // 지면 평면 y=0 교차
-            if (t < 0) return;
-            Vector3 target = from + dir * t;
-            _nav.TargetPosition = target;
+            if (TryProjectMouseToGround(out Vector3 target))
+                _nav.TargetPosition = target;
         }
 
         public override void _PhysicsProcess(double delta)
         {
+            if (_dead) { Velocity = Vector3.Zero; MoveAndSlide(); return; }
             HandleAttack(delta);
             HandleMovement();
             SyncHud();
@@ -118,8 +126,9 @@ namespace ChaosOfAI.Actors
 
         private void HandleMovement()
         {
-            // 공격 중(윈도 열림)엔 이동 정지 → 헛방 방지
-            if (_windowOpen) { Velocity = Vector3.Zero; MoveAndSlide(); return; }
+            // 공격 중이라도 스킬이 "이동하며 지속"(회전 격돌)이면 이동 허용, 아니면 스윙에 고정.
+            bool rooted = _windowOpen && (_activeSkill == null || !_activeSkill.AllowMoveWhileActive);
+            if (rooted) { Velocity = Vector3.Zero; MoveAndSlide(); return; }
 
             if (_nav.IsNavigationFinished()) { Velocity = Vector3.Zero; MoveAndSlide(); return; }
 
@@ -130,7 +139,9 @@ namespace ChaosOfAI.Actors
             {
                 dir = dir.Normalized();
                 Velocity = dir * MoveSpeed;
-                FaceDirection(dir);
+                // 이동하며 지속 스킬은 이동 방향을 바라보고, 일반 공격은 타격 방향 유지.
+                if (!_windowOpen || (_activeSkill?.AllowMoveWhileActive ?? false))
+                    FaceDirection(dir);
             }
             MoveAndSlide();
         }
@@ -142,20 +153,22 @@ namespace ChaosOfAI.Actors
 
             _activeSkill = skill;
             _attackTimer = 0f;
+            _rehitTimer = 0f;
             _windowOpen = false;
 
             // 마우스 방향으로 회전(타격 방향 확정)
             FaceMouse();
 
-            // 히트박스 형상 오버라이드 적용
-            if (skill.RangeOverride > 0) _hitbox.Range = skill.RangeOverride;
-            if (skill.ConeHalfAngleOverride > 0) _hitbox.ConeHalfAngleDeg = skill.ConeHalfAngleOverride;
+            // 히트박스 형상: override>0이면 적용, 아니면 씬 기본값으로 복원(직전 스킬 값 잔류 방지).
+            _hitbox.Range = skill.RangeOverride > 0 ? skill.RangeOverride : _defaultRange;
+            _hitbox.ConeHalfAngleDeg = skill.ConeHalfAngleOverride > 0 ? skill.ConeHalfAngleOverride : _defaultConeHalfAngle;
         }
 
         private void HandleAttack(double delta)
         {
             if (_activeSkill == null) return;
-            _attackTimer += (float)delta;
+            float dt = (float)delta;
+            _attackTimer += dt;
 
             // 액티브 윈도 진입
             if (!_windowOpen && _attackTimer >= _activeSkill.ActiveWindowStart)
@@ -167,6 +180,17 @@ namespace ChaosOfAI.Actors
             // 윈도 동안 매 물리프레임 Strike(캐시로 다단히트 방지, spin류는 회전하며 여러 대상)
             if (_windowOpen && _attackTimer <= _activeSkill.ActiveWindowEnd)
             {
+                // 다단타: RehitInterval마다 캐시를 비워 같은 대상을 다시 타격.
+                if (_activeSkill.RehitInterval > 0f)
+                {
+                    _rehitTimer += dt;
+                    if (_rehitTimer >= _activeSkill.RehitInterval)
+                    {
+                        _rehitTimer -= _activeSkill.RehitInterval;
+                        _hitbox.ResetHitCache();
+                    }
+                }
+
                 var hits = _hitbox.Strike(BuildAttackProfile(_activeSkill), this,
                     _activeSkill.KnockbackScale, _rng);
                 if (hits.Count > 0) TriggerFeedback(hits, _activeSkill);
@@ -217,16 +241,26 @@ namespace ChaosOfAI.Actors
         // ── 회전 유틸 ─────────────────────────────────────
         private void FaceMouse()
         {
-            if (_camera == null) return;
+            if (TryProjectMouseToGround(out Vector3 target))
+            {
+                Vector3 face = target - GlobalPosition; face.Y = 0;
+                if (face.LengthSquared() > 0.0001f) FaceDirection(face.Normalized());
+            }
+        }
+
+        // 마우스 화면 좌표 → 지면(y=0) 교차점. 카메라 없거나 평면과 평행이면 false.
+        private bool TryProjectMouseToGround(out Vector3 hit)
+        {
+            hit = Vector3.Zero;
+            if (_camera == null) return false;
             Vector2 mouse = GetViewport().GetMousePosition();
             Vector3 from = _camera.ProjectRayOrigin(mouse);
             Vector3 dir = _camera.ProjectRayNormal(mouse);
-            if (Mathf.IsZeroApprox(dir.Y)) return;
+            if (Mathf.IsZeroApprox(dir.Y)) return false;
             float t = -from.Y / dir.Y;
-            if (t < 0) return;
-            Vector3 target = from + dir * t;
-            Vector3 face = target - GlobalPosition; face.Y = 0;
-            if (face.LengthSquared() > 0.0001f) FaceDirection(face.Normalized());
+            if (t < 0) return false;
+            hit = from + dir * t;
+            return true;
         }
 
         private void FaceDirection(Vector3 dir)
@@ -241,6 +275,8 @@ namespace ChaosOfAI.Actors
 
         public void ReceiveHit(in DamageResult result, Vector3 knockbackDir, float knockbackStrength)
         {
+            if (_dead) return;
+
             if (!result.Hit)
             {
                 DamageNumberSpawner.Instance?.Spawn(GlobalPosition, 0f, false, miss: true);
@@ -248,7 +284,19 @@ namespace ChaosOfAI.Actors
             }
             _stats.ApplyDamage(result.Amount);
             DamageNumberSpawner.Instance?.Spawn(GlobalPosition, result.Amount, result.IsCritical, miss: false);
-            // TODO(Sonnet): 피격 이펙트/사운드, 사망 시 게임오버 화면(아트 자산 필요).
+
+            if (!_stats.IsAlive) Die();
+        }
+
+        private void Die()
+        {
+            _dead = true;
+            _activeSkill = null;
+            _windowOpen = false;
+            _hitbox.EndSwing();
+            Velocity = Vector3.Zero;
+            CombatFeedback.Instance?.Shake(0.2f);
+            (GetTree().GetFirstNodeInGroup("hud") as Hud)?.ShowDeath();
         }
 
         // ── HUD 연동 ─────────────────────────────────────

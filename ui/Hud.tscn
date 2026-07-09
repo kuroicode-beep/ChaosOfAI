@@ -34,7 +34,7 @@ offset_right = 180.0
 offset_bottom = 48.0
 theme_override_font_sizes/font_size = 22
 theme_override_colors/font_color = Color(1, 1, 1, 1)
-text = "v0.3.0"
+text = "v0.4.0"
 
 [node name="Vitals" type="Control" parent="."]
 offset_left = 16.0
@@ -109,3 +109,42 @@ theme_override_colors/default_color = Color(0.9, 0.9, 0.92, 1)
 bbcode_enabled = true
 scroll_active = true
 text = ""
+
+; 사망 오버레이(§ 발견1 수정). 접근성: 고대비 텍스트 + 색상만이 아니라 안내 문구 병행.
+[node name="DeathPanel" type="Control" parent="."]
+visible = false
+anchor_right = 1.0
+anchor_bottom = 1.0
+
+[node name="Background" type="ColorRect" parent="DeathPanel"]
+anchor_right = 1.0
+anchor_bottom = 1.0
+color = Color(0.12, 0.0, 0.02, 0.7)
+
+[node name="DeadLabel" type="Label" parent="DeathPanel"]
+anchor_left = 0.5
+anchor_top = 0.4
+anchor_right = 0.5
+anchor_bottom = 0.4
+offset_left = -200.0
+offset_top = -40.0
+offset_right = 200.0
+offset_bottom = 40.0
+horizontal_alignment = 1
+theme_override_font_sizes/font_size = 48
+theme_override_colors/font_color = Color(1, 0.25, 0.3, 1)
+text = "사망"
+
+[node name="RestartLabel" type="Label" parent="DeathPanel"]
+anchor_left = 0.5
+anchor_top = 0.4
+anchor_right = 0.5
+anchor_bottom = 0.4
+offset_left = -200.0
+offset_top = 50.0
+offset_right = 200.0
+offset_bottom = 90.0
+horizontal_alignment = 1
+theme_override_font_sizes/font_size = 22
+theme_override_colors/font_color = Color(1, 1, 1, 1)
+text = "R 키를 눌러 다시 시작"
