@@ -1,11 +1,13 @@
 // ui/Hud.cs
 // HUD(§6): 체력(빨강)·마나(파랑) 구슬 + 상시 버전 표시(전역 규칙: 화면 상단 모서리 vX.Y.Z).
 // 설정 패널에 "업데이트 내역"(전역 규칙: AppVersion.History를 최신순으로 앱 안에서 바로 확인).
-// toggle_settings(Esc)로 패널 토글. 씬 기대치: Hud.tscn 노드 트리 주석 참고.
+// toggle_settings(Esc)/toggle_inventory(I)로 패널 토글. 씬 기대치: Hud.tscn 노드 트리 주석 참고.
 
+using System.Collections.Generic;
 using System.Text;
 using Godot;
 using ChaosOfAI.Core;
+using ChaosOfAI.Resources;
 
 namespace ChaosOfAI.UI
 {
@@ -20,6 +22,8 @@ namespace ChaosOfAI.UI
         private RichTextLabel _historyText = null!;
         private Control _deathPanel = null!;
         private Control _victoryPanel = null!;
+        private Control _inventoryPanel = null!;
+        private RichTextLabel _inventoryText = null!;
 
         public override void _Ready()
         {
@@ -33,12 +37,16 @@ namespace ChaosOfAI.UI
             _historyText = GetNode<RichTextLabel>("SettingsPanel/HistoryText");
             _deathPanel = GetNode<Control>("DeathPanel");
             _victoryPanel = GetNode<Control>("VictoryPanel");
+            _inventoryPanel = GetNode<Control>("InventoryPanel");
+            _inventoryText = GetNode<RichTextLabel>("InventoryPanel/ItemList");
 
             _versionLabel.Text = $"v{AppVersion.Current}";
             _historyText.Text = BuildHistoryText();
             _settingsPanel.Visible = false;
             _deathPanel.Visible = false;
             _victoryPanel.Visible = false;
+            _inventoryPanel.Visible = false;
+            RefreshInventory(System.Array.Empty<ItemData>());
         }
 
         /// <summary>플레이어 사망 시 오버레이 표시(§ 발견1 수정). R키 재시작 안내는 씬 리로드로 처리.</summary>
@@ -53,10 +61,42 @@ namespace ChaosOfAI.UI
         {
             if (@event.IsActionPressed("toggle_settings"))
                 _settingsPanel.Visible = !_settingsPanel.Visible;
+            else if (@event.IsActionPressed("toggle_inventory"))
+                _inventoryPanel.Visible = !_inventoryPanel.Visible;
             // 승리 화면에서 R = 재시작(사망 재시작은 Player가 처리).
             else if (_victoryPanel.Visible && @event.IsActionPressed("restart"))
                 GetTree().ReloadCurrentScene();
         }
+
+        /// <summary>M4 인벤토리(간소화): 습득 목록을 등급 색상 + 접사 요약으로 갱신. 픽업 시 호출.</summary>
+        public void RefreshInventory(IReadOnlyList<ItemData> items)
+        {
+            var sb = new StringBuilder();
+            sb.Append($"[b]습득 아이템 {items.Count}개[/b] (효과는 즉시 적용됨)\n\n");
+            foreach (var it in items)
+            {
+                string hex = it.RarityColor.ToHtml(false);
+                sb.Append($"[color=#{hex}]■ {it.DisplayName}[/color] [{RarityLabel(it.Rarity)}]\n");
+                if (it.BonusMinDamage > 0 || it.BonusMaxDamage > 0)
+                    sb.Append($"   +데미지 {it.BonusMinDamage}~{it.BonusMaxDamage}\n");
+                if (it.BonusMaxHp > 0) sb.Append($"   +최대 HP {it.BonusMaxHp}\n");
+                if (it.BonusStrength > 0) sb.Append($"   +힘 {it.BonusStrength}\n");
+                if (it.BonusDefense > 0) sb.Append($"   +방어 {it.BonusDefense}\n");
+                if (it.BonusAttackRating > 0) sb.Append($"   +명중 {it.BonusAttackRating}\n");
+            }
+            if (items.Count == 0) sb.Append("(아직 없음 — 몬스터를 처치해 보세요)");
+            _inventoryText.Text = sb.ToString();
+        }
+
+        // 접근성: 색상만으로 등급을 구분하지 않고 텍스트 라벨 병행(전역 규칙).
+        private static string RarityLabel(ItemRarity r) => r switch
+        {
+            ItemRarity.Normal => "일반",
+            ItemRarity.Magic => "매직",
+            ItemRarity.Rare => "레어",
+            ItemRarity.Unique => "유니크",
+            _ => "?",
+        };
 
         /// <summary>매 프레임 또는 스탯 변경 시 호출해 구슬을 갱신.</summary>
         public void UpdateVitals(float hp, float maxHp, float mp, float maxMp)

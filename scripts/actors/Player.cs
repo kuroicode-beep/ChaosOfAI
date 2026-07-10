@@ -152,6 +152,8 @@ namespace ChaosOfAI.Actors
             eq.FlatMinDamage += item.BonusMinDamage;
             eq.FlatMaxDamage += item.BonusMaxDamage;
             _stats.Equipment = eq;
+
+            _hud?.RefreshInventory(Inventory); // 인벤토리 패널(I) 갱신
         }
 
         // 화면 클릭 → 지면(y=0 평면) 교차점으로 이동 목표 설정(M0).

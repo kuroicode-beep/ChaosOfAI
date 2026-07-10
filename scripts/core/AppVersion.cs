@@ -20,11 +20,16 @@ namespace ChaosOfAI.Core
     public static class AppVersion
     {
         // 루트 VERSION 파일과 항상 일치시킨다.
-        public const string Current = "0.5.0";
+        public const string Current = "0.6.0";
 
         /// <summary>최신이 앞. 설정 → 업데이트 내역에서 그대로 노출.</summary>
         public static readonly IReadOnlyList<VersionEntry> History = new List<VersionEntry>
         {
+            new VersionEntry("0.6.0", "2026-07-10", new[]
+            {
+                "인벤토리 패널(I 키): 습득 아이템 목록 — 등급 색상+텍스트 라벨, 접사 요약.",
+                "몬스터 피격 발광(flinch): 명중 시 흰색 플래시(개체별 머티리얼).",
+            }),
             new VersionEntry("0.5.0", "2026-07-10", new[]
             {
                 "M5 프롤로그 던전: 방·복도·벽 레이아웃(ASCII 맵 데이터 주도) + 적 배치.",

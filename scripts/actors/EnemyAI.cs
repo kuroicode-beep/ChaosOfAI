@@ -22,6 +22,13 @@ namespace ChaosOfAI.Actors
         private CombatStats _stats = null!;
         private EnemyData _data = null!; // Data 또는 기본값으로 _Ready에서 확정
         private MeleeHitbox? _hitbox;
+
+        // 피격 발광(§4.3 flinch): 명중 시 잠깐 밝게 번쩍. 머티리얼은 인스턴스별 복제.
+        private StandardMaterial3D? _mat;
+        private Color _baseEmission;
+        private float _baseEmissionEnergy;
+        private float _flashTimer;
+        private const float FlashSeconds = 0.12f;
         private Node3D? _player;
         private readonly Random _rng = new();
 
@@ -44,6 +51,16 @@ namespace ChaosOfAI.Actors
 
             _stats = _data.CreateStats();
             _hitbox = GetNodeOrNull<MeleeHitbox>("MeleeHitbox");
+
+            // 피격 발광용 머티리얼 복제(다른 개체와 공유되지 않게).
+            var mesh = GetNodeOrNull<MeshInstance3D>("MeshInstance3D");
+            if (mesh?.GetSurfaceOverrideMaterial(0) is StandardMaterial3D shared)
+            {
+                _mat = (StandardMaterial3D)shared.Duplicate();
+                mesh.SetSurfaceOverrideMaterial(0, _mat);
+                _baseEmission = _mat.Emission;
+                _baseEmissionEnergy = _mat.EmissionEnergyMultiplier;
+            }
 
             _player = ResolvePlayer();
         }
@@ -72,6 +89,7 @@ namespace ChaosOfAI.Actors
 
             _stats.ApplyDamage(result.Amount);
             DamageNumberSpawner.Instance?.Spawn(GlobalPosition, result.Amount, result.IsCritical, miss: false);
+            StartHitFlash();
 
             // 넉백(간이): 즉시 위치 밀기. Sonnet이 물리 기반(velocity)으로 개선 가능.
             if (knockbackStrength > 0f)
@@ -117,6 +135,7 @@ namespace ChaosOfAI.Actors
 
             float dt = (float)delta;
             if (_attackCooldownTimer > 0f) _attackCooldownTimer -= dt;
+            UpdateHitFlash(dt);
 
             Vector3 toPlayer = _player.GlobalPosition - GlobalPosition;
             toPlayer.Y = 0f;
@@ -211,6 +230,26 @@ namespace ChaosOfAI.Actors
             if (dir.LengthSquared() < 0.0001f) return;
             float yaw = Mathf.Atan2(dir.X, dir.Z);
             Rotation = new Vector3(0, yaw, 0);
+        }
+
+        // ── 피격 발광(flinch, §4.3) ─────────────────────────
+        private void StartHitFlash()
+        {
+            if (_mat == null) return;
+            _flashTimer = FlashSeconds;
+            _mat.Emission = new Color(1f, 1f, 1f);
+            _mat.EmissionEnergyMultiplier = 6f;
+        }
+
+        private void UpdateHitFlash(float dt)
+        {
+            if (_mat == null || _flashTimer <= 0f) return;
+            _flashTimer -= dt;
+            if (_flashTimer <= 0f)
+            {
+                _mat.Emission = _baseEmission;
+                _mat.EmissionEnergyMultiplier = _baseEmissionEnergy;
+            }
         }
 
         // 시야 판정: 눈높이(1m)에서 플레이어까지 world(벽, layer 1)에 막히지 않으면 true.

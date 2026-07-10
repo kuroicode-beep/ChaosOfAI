@@ -34,7 +34,7 @@ offset_right = 180.0
 offset_bottom = 48.0
 theme_override_font_sizes/font_size = 22
 theme_override_colors/font_color = Color(1, 1, 1, 1)
-text = "v0.5.0"
+text = "v0.6.0"
 
 [node name="Vitals" type="Control" parent="."]
 offset_left = 16.0
@@ -187,3 +187,37 @@ horizontal_alignment = 1
 theme_override_font_sizes/font_size = 22
 theme_override_colors/font_color = Color(1, 1, 1, 1)
 text = "오버마인드의 사도를 파괴했다 — R 키로 다시 시작"
+
+; 인벤토리 패널(I 토글, M4 간소화 — 목록형). 다크 배경/고대비/16px 이상(접근성 기준).
+[node name="InventoryPanel" type="Control" parent="."]
+visible = false
+anchor_left = 1.0
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = -420.0
+
+[node name="Background" type="ColorRect" parent="InventoryPanel"]
+anchor_right = 1.0
+anchor_bottom = 1.0
+color = Color(0.03, 0.03, 0.05, 0.92)
+
+[node name="Title" type="Label" parent="InventoryPanel"]
+offset_left = 24.0
+offset_top = 20.0
+offset_right = 400.0
+offset_bottom = 56.0
+theme_override_font_sizes/font_size = 26
+theme_override_colors/font_color = Color(1, 1, 1, 1)
+text = "인벤토리 (I)"
+
+[node name="ItemList" type="RichTextLabel" parent="InventoryPanel"]
+offset_left = 24.0
+offset_top = 68.0
+offset_right = 400.0
+offset_bottom = 640.0
+theme_override_font_sizes/normal_font_size = 18
+theme_override_font_sizes/bold_font_size = 20
+theme_override_colors/default_color = Color(0.9, 0.9, 0.92, 1)
+bbcode_enabled = true
+scroll_active = true
+text = ""
