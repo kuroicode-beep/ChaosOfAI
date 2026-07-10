@@ -31,14 +31,17 @@ namespace ChaosOfAI.Tests
             PlayerScene ??= GD.Load<PackedScene>("res://scenes/Player.tscn");
             EnemyScene ??= GD.Load<PackedScene>("res://scenes/Enemy.tscn");
 
+            // ★ Position은 AddChild "전"에 설정한다. 후에 설정하면 물리 서버가 그 프레임엔 아직
+            // 스폰 기본 위치로 알고 있어, 두 CharacterBody3D가 원점 부근에서 겹친 것으로 오판해
+            // MoveAndSlide가 서로 밀어내는 레이스가 생긴다(ItemPickupTest 원인 규명 중 발견).
             _player = PlayerScene!.Instantiate<Player>();
+            _player.Position = Vector3.Zero;
             AddChild(_player);
-            _player.GlobalPosition = Vector3.Zero;
 
             _enemy = EnemyScene!.Instantiate<EnemyAI>();
-            AddChild(_enemy);
             // glitch_drone AttackRange=1.8 → 처음부터 사거리 안에 배치해 내비 없이 즉시 Attack 전이 유도.
-            _enemy.GlobalPosition = new Vector3(1.5f, 0, 0);
+            _enemy.Position = new Vector3(1.5f, 0, 0);
+            AddChild(_enemy);
         }
 
         public override void _PhysicsProcess(double delta)

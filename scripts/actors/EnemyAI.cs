@@ -108,7 +108,7 @@ namespace ChaosOfAI.Actors
         {
             State = EnemyState.Dead;
             EmitSignal(SignalName.Died);
-            GrantRewardsToPlayer(); // M3/M4: 경험치 + 드랍(간소화, 즉시 장비 적용)
+            GrantRewardsToPlayer(); // 경험치는 즉시, 드랍은 바닥에 스폰(§5.4/§5.5 걸어가서 습득)
             // TODO(Sonnet): 사망 연출(아트 자산 필요).
             QueueFree();
         }
@@ -121,7 +121,7 @@ namespace ChaosOfAI.Actors
 
             var loot = LootTable.Roll(_data.DropChance, _rng);
             if (loot != null)
-                player.PickupItem(loot);
+                ItemPickupSpawner.Instance?.Spawn(loot, GlobalPosition);
         }
 
         // ── AI 상태머신 (M2) ────────────────────────────────
@@ -228,7 +228,9 @@ namespace ChaosOfAI.Actors
         private void FaceDirection(Vector3 dir)
         {
             if (dir.LengthSquared() < 0.0001f) return;
-            float yaw = Mathf.Atan2(dir.X, dir.Z);
+            // Godot 정면(-Z) 기준 world-forward = (-sinθ, 0, -cosθ) → dir와 일치시키려면
+            // θ = atan2(-dir.X, -dir.Z) (atan2(dir.X, dir.Z)는 180° 반대를 가리킴 — 실전 검증 중 발견).
+            float yaw = Mathf.Atan2(-dir.X, -dir.Z);
             Rotation = new Vector3(0, yaw, 0);
         }
 

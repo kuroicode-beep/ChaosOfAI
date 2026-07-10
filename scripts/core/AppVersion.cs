@@ -20,11 +20,18 @@ namespace ChaosOfAI.Core
     public static class AppVersion
     {
         // 루트 VERSION 파일과 항상 일치시킨다.
-        public const string Current = "0.7.0";
+        public const string Current = "0.8.0";
 
         /// <summary>최신이 앞. 설정 → 업데이트 내역에서 그대로 노출.</summary>
         public static readonly IReadOnlyList<VersionEntry> History = new List<VersionEntry>
         {
+            new VersionEntry("0.8.0", "2026-07-10", new[]
+            {
+                "바닥 드랍 픽업(§5.4): 처치 즉시 적용 대신 바닥에 아이템이 떨어지고 걸어가 습득.",
+                "치명 버그 2건 수정: 스폰 시 물리 서버 레이스로 캐릭터가 서로 밀리던 문제,",
+                "캐릭터 정면(FaceDirection)이 180도 반대를 보던 문제(플레이어 공격이 거의 항상 빗나갔음).",
+                "회귀 테스트 2종 추가(PlayerAttackTest·ItemPickupTest), 총 9종 전부 통과.",
+            }),
             new VersionEntry("0.7.0", "2026-07-10", new[]
             {
                 "저장/불러오기: 레벨·XP·스탯·장비·인벤토리·스킬강화가 재시작 후에도 이어짐.",

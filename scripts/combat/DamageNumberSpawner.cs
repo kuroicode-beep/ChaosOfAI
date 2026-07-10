@@ -27,8 +27,8 @@ namespace ChaosOfAI.Combat
             if (currentScene == null) return;
 
             var inst = _scene.Instantiate<DamageNumber>();
+            inst.Position = worldPos + new Vector3(0, 1.6f, 0); // AddChild 전에 설정
             currentScene.AddChild(inst);
-            inst.GlobalPosition = worldPos + new Vector3(0, 1.6f, 0);
             inst.Show(amount, crit, miss);
         }
     }

@@ -445,7 +445,9 @@ namespace ChaosOfAI.Actors
 
         private void FaceDirection(Vector3 dir)
         {
-            float yaw = Mathf.Atan2(dir.X, dir.Z);
+            // Godot 정면(-Z) 기준 world-forward = (-sinθ, 0, -cosθ) → dir와 일치시키려면
+            // θ = atan2(-dir.X, -dir.Z) (atan2(dir.X, dir.Z)는 180° 반대를 가리킴 — 실전 검증 중 발견).
+            float yaw = Mathf.Atan2(-dir.X, -dir.Z);
             Rotation = new Vector3(0, yaw, 0);
         }
 

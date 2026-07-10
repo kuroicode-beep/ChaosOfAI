@@ -128,11 +128,16 @@ namespace ChaosOfAI.Core
             AddChild(body);
         }
 
+        // ★ Position(로컬)은 반드시 AddChild "전"에 설정한다. AddChild 후 GlobalPosition을
+        // 설정하면 물리 서버가 그 프레임엔 아직 스폰 기본 위치(원점)로 알고 있어, 같은 프레임에
+        // 여러 캐릭터바디가 원점 부근에서 겹친 것으로 오판해 서로 밀어내는 레이스가 생긴다
+        // (tests/ItemPickupTest 원인 규명 중 발견 — 던전 스폰 시 실제로 발생하던 버그).
+
         private Node3D SpawnPlayer(Vector3 pos)
         {
             var player = GD.Load<PackedScene>("res://scenes/Player.tscn").Instantiate<Player>();
+            player.Position = pos; // DungeonBuilder 자신이 원점/항등 변환이므로 로컬=월드
             AddChild(player);
-            player.GlobalPosition = pos;
             return player;
         }
 
@@ -140,9 +145,9 @@ namespace ChaosOfAI.Core
         {
             var enemy = _enemyScene.Instantiate<EnemyAI>();
             enemy.Data = data;
-            AddChild(enemy);
-            enemy.GlobalPosition = pos;
+            enemy.Position = pos;
             if (scale != 1f) enemy.Scale = new Vector3(scale, scale, scale);
+            AddChild(enemy);
 
             if (isBoss)
             {

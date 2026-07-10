@@ -24,6 +24,7 @@ config/icon="res://icon.svg"
 
 CombatFeedback="*res://scripts/combat/CombatFeedback.cs"
 DamageNumberSpawner="*res://scripts/combat/DamageNumberSpawner.cs"
+ItemPickupSpawner="*res://scripts/combat/ItemPickupSpawner.cs"
 
 [display]
 
