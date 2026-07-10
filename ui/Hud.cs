@@ -19,6 +19,7 @@ namespace ChaosOfAI.UI
         private Control _settingsPanel = null!;
         private RichTextLabel _historyText = null!;
         private Control _deathPanel = null!;
+        private Control _victoryPanel = null!;
 
         public override void _Ready()
         {
@@ -31,20 +32,30 @@ namespace ChaosOfAI.UI
             _settingsPanel = GetNode<Control>("SettingsPanel");
             _historyText = GetNode<RichTextLabel>("SettingsPanel/HistoryText");
             _deathPanel = GetNode<Control>("DeathPanel");
+            _victoryPanel = GetNode<Control>("VictoryPanel");
 
             _versionLabel.Text = $"v{AppVersion.Current}";
             _historyText.Text = BuildHistoryText();
             _settingsPanel.Visible = false;
             _deathPanel.Visible = false;
+            _victoryPanel.Visible = false;
         }
 
         /// <summary>플레이어 사망 시 오버레이 표시(§ 발견1 수정). R키 재시작 안내는 씬 리로드로 처리.</summary>
         public void ShowDeath() => _deathPanel.Visible = true;
 
+        /// <summary>보스 처치 = 프롤로그 클리어(M5). R키로 재시작 가능.</summary>
+        public void ShowVictory() => _victoryPanel.Visible = true;
+
+        public bool VictoryVisible => _victoryPanel.Visible; // 테스트용
+
         public override void _UnhandledInput(InputEvent @event)
         {
-            if (Input.IsActionJustPressed("toggle_settings"))
+            if (@event.IsActionPressed("toggle_settings"))
                 _settingsPanel.Visible = !_settingsPanel.Visible;
+            // 승리 화면에서 R = 재시작(사망 재시작은 Player가 처리).
+            else if (_victoryPanel.Visible && @event.IsActionPressed("restart"))
+                GetTree().ReloadCurrentScene();
         }
 
         /// <summary>매 프레임 또는 스탯 변경 시 호출해 구슬을 갱신.</summary>

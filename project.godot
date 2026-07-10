@@ -16,7 +16,7 @@ compatibility/default_parent_skeleton_in_mesh_instance_3d=true
 
 config/name="Chaos of AI"
 config/description="폐허가 된 서울, 폭주한 AI에 맞서는 다크 액션 RPG (프롤로그 MVP)"
-run/main_scene="res://scenes/Main.tscn"
+run/main_scene="res://scenes/Dungeon.tscn"
 config/features=PackedStringArray("4.7", "C#", "Forward Plus")
 config/icon="res://icon.svg"
 

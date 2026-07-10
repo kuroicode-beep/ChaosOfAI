@@ -1,0 +1,22 @@
+[gd_resource type="Resource" script_class="EnemyData" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/resources/EnemyData.cs" id="1_herald"]
+
+[resource]
+script = ExtResource("1_herald")
+Id = "overmind_herald"
+DisplayName = "오버마인드의 사도"
+Level = 5
+Strength = 28
+Dexterity = 14
+Vitality = 60
+Energy = 10
+MinDamage = 8
+MaxDamage = 14
+AttackCooldown = 1.4
+AttackRange = 2.6
+DamageReduction = 0.2
+MoveSpeed = 2.6
+DetectionRange = 12.0
+XpReward = 120
+DropChance = 1.0

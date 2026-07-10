@@ -34,7 +34,7 @@ offset_right = 180.0
 offset_bottom = 48.0
 theme_override_font_sizes/font_size = 22
 theme_override_colors/font_color = Color(1, 1, 1, 1)
-text = "v0.4.2"
+text = "v0.5.0"
 
 [node name="Vitals" type="Control" parent="."]
 offset_left = 16.0
@@ -148,3 +148,42 @@ horizontal_alignment = 1
 theme_override_font_sizes/font_size = 22
 theme_override_colors/font_color = Color(1, 1, 1, 1)
 text = "R 키를 눌러 다시 시작"
+
+; 프롤로그 클리어 오버레이(M5). 접근성: 고대비 + 텍스트 안내 병행.
+[node name="VictoryPanel" type="Control" parent="."]
+visible = false
+anchor_right = 1.0
+anchor_bottom = 1.0
+
+[node name="Background" type="ColorRect" parent="VictoryPanel"]
+anchor_right = 1.0
+anchor_bottom = 1.0
+color = Color(0.0, 0.08, 0.1, 0.72)
+
+[node name="ClearLabel" type="Label" parent="VictoryPanel"]
+anchor_left = 0.5
+anchor_top = 0.38
+anchor_right = 0.5
+anchor_bottom = 0.38
+offset_left = -320.0
+offset_top = -50.0
+offset_right = 320.0
+offset_bottom = 40.0
+horizontal_alignment = 1
+theme_override_font_sizes/font_size = 46
+theme_override_colors/font_color = Color(0.35, 0.95, 1.0, 1)
+text = "프롤로그 클리어"
+
+[node name="SubLabel" type="Label" parent="VictoryPanel"]
+anchor_left = 0.5
+anchor_top = 0.38
+anchor_right = 0.5
+anchor_bottom = 0.38
+offset_left = -320.0
+offset_top = 52.0
+offset_right = 320.0
+offset_bottom = 92.0
+horizontal_alignment = 1
+theme_override_font_sizes/font_size = 22
+theme_override_colors/font_color = Color(1, 1, 1, 1)
+text = "오버마인드의 사도를 파괴했다 — R 키로 다시 시작"

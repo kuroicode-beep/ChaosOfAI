@@ -126,7 +126,9 @@ namespace ChaosOfAI.Actors
             {
                 case EnemyState.Idle:
                     Velocity = Vector3.Zero;
-                    if (dist <= _data.DetectionRange) State = EnemyState.Chase;
+                    // 탐지: 범위 안 + 시야(벽 관통 어그로 방지, M5 던전 대응).
+                    if (dist <= _data.DetectionRange && HasLineOfSight())
+                        State = EnemyState.Chase;
                     MoveAndSlide();
                     break;
 
@@ -209,6 +211,19 @@ namespace ChaosOfAI.Actors
             if (dir.LengthSquared() < 0.0001f) return;
             float yaw = Mathf.Atan2(dir.X, dir.Z);
             Rotation = new Vector3(0, yaw, 0);
+        }
+
+        // 시야 판정: 눈높이(1m)에서 플레이어까지 world(벽, layer 1)에 막히지 않으면 true.
+        private bool HasLineOfSight()
+        {
+            if (_player == null) return false;
+            var space = GetWorld3D().DirectSpaceState;
+            var query = PhysicsRayQueryParameters3D.Create(
+                GlobalPosition + Vector3.Up,
+                _player.GlobalPosition + Vector3.Up,
+                collisionMask: 1);
+            var hit = space.IntersectRay(query);
+            return hit.Count == 0;
         }
     }
 }

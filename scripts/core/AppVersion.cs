@@ -20,11 +20,17 @@ namespace ChaosOfAI.Core
     public static class AppVersion
     {
         // 루트 VERSION 파일과 항상 일치시킨다.
-        public const string Current = "0.4.2";
+        public const string Current = "0.5.0";
 
         /// <summary>최신이 앞. 설정 → 업데이트 내역에서 그대로 노출.</summary>
         public static readonly IReadOnlyList<VersionEntry> History = new List<VersionEntry>
         {
+            new VersionEntry("0.5.0", "2026-07-10", new[]
+            {
+                "M5 프롤로그 던전: 방·복도·벽 레이아웃(ASCII 맵 데이터 주도) + 적 배치.",
+                "보스 '오버마인드의 사도' + 처치 시 프롤로그 클리어 화면(R 재시작).",
+                "벽 관통 어그로 방지(시야 판정). 던전이 시작 씬으로 변경.",
+            }),
             new VersionEntry("0.4.2", "2026-07-10", new[]
             {
                 "공격 피드백 추가: 스킬 발동 시 스윙 이펙트(전방/주위) + 효과음(휘두름·타격·레벨업).",
