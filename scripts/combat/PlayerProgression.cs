@@ -55,5 +55,21 @@ namespace ChaosOfAI.Combat
             UnspentStatPoints--;
             return true;
         }
+
+        /// <summary>스킬 포인트 1개 소비. 실제 강화 적용(SkillData 변경)은 호출자(Player) 책임.</summary>
+        public bool SpendSkillPoint()
+        {
+            if (UnspentSkillPoints <= 0) return false;
+            UnspentSkillPoints--;
+            return true;
+        }
+
+        /// <summary>저장 데이터 복원용: XP/포인트를 직접 설정(레벨업 이벤트 재발화 없음).</summary>
+        public void LoadState(int currentXp, int unspentStatPoints, int unspentSkillPoints)
+        {
+            CurrentXp = currentXp;
+            UnspentStatPoints = unspentStatPoints;
+            UnspentSkillPoints = unspentSkillPoints;
+        }
     }
 }

@@ -124,5 +124,15 @@ namespace ChaosOfAI.Combat
             CurrentHp = MaxHp;
             CurrentMp = MaxMp;
         }
+
+        /// <summary>저장 데이터 복원용: 레벨/스탯/장비를 직접 설정하고 HP·MP를 최대치로 채운다.
+        /// (세이브에는 진행 결과만 담기고 XP 재생 과정은 재현하지 않는다 — 로드 시 만피로 시작)</summary>
+        public void LoadState(int level, PrimaryAttributes attributes, EquipmentAggregate equipment)
+        {
+            Level = Math.Max(1, level);
+            Attributes = attributes;
+            Equipment = equipment;
+            FullRestore();
+        }
     }
 }

@@ -57,5 +57,8 @@ namespace ChaosOfAI.Combat
         // 경험치 곡선: 다음 레벨까지 필요 XP = Base + (Level-1)·Growth. 초기값, 실플레이 후 튜닝 대상.
         public const int XpCurveBase = 20;
         public const int XpCurveGrowth = 15;
+
+        // 스킬 강화(§5.5 스킬 포인트 사용처): 포인트 1개당 해당 스킬 DamageMultiplier 증가치.
+        public const float SkillUpgradeDamageBonus = 0.15f;
     }
 }

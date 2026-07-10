@@ -20,11 +20,17 @@ namespace ChaosOfAI.Core
     public static class AppVersion
     {
         // 루트 VERSION 파일과 항상 일치시킨다.
-        public const string Current = "0.6.0";
+        public const string Current = "0.7.0";
 
         /// <summary>최신이 앞. 설정 → 업데이트 내역에서 그대로 노출.</summary>
         public static readonly IReadOnlyList<VersionEntry> History = new List<VersionEntry>
         {
+            new VersionEntry("0.7.0", "2026-07-10", new[]
+            {
+                "저장/불러오기: 레벨·XP·스탯·장비·인벤토리·스킬강화가 재시작 후에도 이어짐.",
+                "스킬 포인트 실사용: 8/9/0 키로 강타/분쇄/회전격돌 강화(데미지 증가).",
+                "세이브는 실행 파일에서만 동작 — 개발 테스트가 실제 진행도를 건드리지 않음.",
+            }),
             new VersionEntry("0.6.0", "2026-07-10", new[]
             {
                 "인벤토리 패널(I 키): 습득 아이템 목록 — 등급 색상+텍스트 라벨, 접사 요약.",

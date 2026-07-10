@@ -41,5 +41,13 @@ namespace ChaosOfAI.Resources
             if (rng.NextDouble() >= dropChance) return null;
             return Pool[rng.Next(Pool.Length)];
         }
+
+        /// <summary>저장 데이터 복원용: Id로 풀에서 아이템을 찾는다(없으면 null).</summary>
+        public static ItemData? FindById(string id)
+        {
+            foreach (var item in Pool)
+                if (item.Id == id) return item;
+            return null;
+        }
     }
 }

@@ -4,8 +4,10 @@
 // Sonnet 확장 지점: 애니메이션 연동, 스탯/레벨업 UI 시각화.
 
 using System;
+using System.Collections.Generic;
 using Godot;
 using ChaosOfAI.Combat;
+using ChaosOfAI.Core;
 using ChaosOfAI.Resources;
 using ChaosOfAI.UI;
 
@@ -47,8 +49,18 @@ namespace ChaosOfAI.Actors
 
         private bool _dead;
 
+        // 저장/불러오기는 export된 실행 파일에서만 자동 활성화된다(OS.HasFeature("standalone")).
+        // 에디터/헤드리스 테스트 실행에서는 비활성 → 개발자의 스크린샷/회귀 테스트가 사용자의
+        // 실제 플레이 세이브(user://save.json)를 절대 덮어쓰지 않는다.
+        // 테스트가 저장 경로 자체를 검증하려면 이 플래그를 강제로 켜고 SaveSystem.FileName도 바꿀 것.
+        public static bool ForceEnableSaveForTests = false;
+        private bool _saveEnabled;
+
         // M4(간소화): 그리드/장착 UI 없이 습득 아이템 목록만 보유, 보너스는 즉시 적용(§ 아키텍처 노트).
         public readonly System.Collections.Generic.List<ItemData> Inventory = new();
+
+        // 스킬 강화(§5.5 스킬 포인트 사용처): 스킬Id → 투자한 포인트 수(저장/복원용).
+        private readonly Dictionary<string, int> _skillUpgrades = new();
 
         public CombatStats Stats => _stats;
         public PlayerProgression Progression => _progression;
@@ -70,17 +82,29 @@ namespace ChaosOfAI.Actors
             _stats = new CombatStats(1, new PrimaryAttributes(str: 25, dex: 15, vit: 20, ene: 10));
             _progression = new PlayerProgression(_stats);
 
-            // 스킬 .tres 미할당 시 코드 폴백(SkillLibrary)으로 M1 검증 가능하게
-            StrikeSkill ??= SkillLibrary.Strike();
-            CrushSkill ??= SkillLibrary.Crush();
-            SpinSkill ??= SkillLibrary.Spin();
+            // 스킬 .tres 미할당 시 코드 폴백(SkillLibrary)으로 M1 검증 가능하게.
+            // ★ Duplicate() 필수: .tres에서 로드한 Resource는 Godot이 경로 기준으로 캐시·공유한다.
+            //   복제 없이 UpgradeSkill()로 DamageMultiplier를 직접 바꾸면, 씬 리로드(R 재시작)로
+            //   새로 생긴 Player가 "이미 강화된" 공유 객체를 또 물려받고 저장된 강화 횟수를
+            //   그 위에 다시 더해 이중 적용되는 버그가 생긴다(SaveLoadTest로 발견).
+            StrikeSkill = (SkillData)(StrikeSkill ?? SkillLibrary.Strike()).Duplicate();
+            CrushSkill = (SkillData)(CrushSkill ?? SkillLibrary.Crush()).Duplicate();
+            SpinSkill = (SkillData)(SpinSkill ?? SkillLibrary.Spin()).Duplicate();
 
-            // 효과음 로드 + 레벨업 사운드 훅.
+            // 저장된 진행도 복원(§ 저장/불러오기) — 스킬 인스턴스가 확정된 뒤에 적용해야 강화치가 반영됨.
+            _saveEnabled = OS.HasFeature("standalone") || ForceEnableSaveForTests;
+            if (_saveEnabled)
+            {
+                var save = SaveSystem.Load();
+                if (save != null) ApplySaveData(save);
+            }
+
+            // 효과음 로드 + 레벨업 사운드 훅(저장 시점도 함께).
             _sfxSwing = GD.Load<AudioStream>("res://assets/sfx/swing.wav");
             _sfxCrush = GD.Load<AudioStream>("res://assets/sfx/crush.wav");
             _sfxHit = GD.Load<AudioStream>("res://assets/sfx/hit.wav");
             _sfxLevel = GD.Load<AudioStream>("res://assets/sfx/levelup.wav");
-            _progression.LeveledUp += _ => PlaySfx(_sfxLevel, -3f);
+            _progression.LeveledUp += _ => { PlaySfx(_sfxLevel, -3f); SaveProgress(); };
 
             // 카메라는 뷰포트의 활성 Camera3D(= Main의 CameraRig 자식)에서 가져온다.
             _camera = GetViewport().GetCamera3D();
@@ -131,13 +155,104 @@ namespace ChaosOfAI.Actors
             else if (@event.IsActionPressed("skill_strike")) BeginAttack(StrikeSkill);
             else if (@event.IsActionPressed("skill_crush")) BeginAttack(CrushSkill);
             else if (@event.IsActionPressed("skill_spin")) BeginAttack(SpinSkill);
-            else if (@event.IsActionPressed("alloc_str")) _progression.SpendStatPoint(StatKind.Strength);
-            else if (@event.IsActionPressed("alloc_dex")) _progression.SpendStatPoint(StatKind.Dexterity);
-            else if (@event.IsActionPressed("alloc_vit")) _progression.SpendStatPoint(StatKind.Vitality);
-            else if (@event.IsActionPressed("alloc_ene")) _progression.SpendStatPoint(StatKind.Energy);
+            else if (@event.IsActionPressed("alloc_str")) SpendStat(StatKind.Strength);
+            else if (@event.IsActionPressed("alloc_dex")) SpendStat(StatKind.Dexterity);
+            else if (@event.IsActionPressed("alloc_vit")) SpendStat(StatKind.Vitality);
+            else if (@event.IsActionPressed("alloc_ene")) SpendStat(StatKind.Energy);
+            else if (@event.IsActionPressed("upgrade_strike")) UpgradeSkill(StrikeSkill);
+            else if (@event.IsActionPressed("upgrade_crush")) UpgradeSkill(CrushSkill);
+            else if (@event.IsActionPressed("upgrade_spin")) UpgradeSkill(SpinSkill);
             else return;
 
             GetViewport().SetInputAsHandled();
+        }
+
+        /// <summary>스탯 포인트 1개를 지정 스탯에 분배 + 저장(이전에는 다음 저장 트리거까지 유실될 수 있었음).</summary>
+        public bool SpendStat(StatKind kind)
+        {
+            if (!_progression.SpendStatPoint(kind)) return false;
+            SaveProgress();
+            return true;
+        }
+
+        /// <summary>스킬 포인트 1개로 스킬 데미지 배율 강화(§5.5 스킬 포인트 사용처).</summary>
+        public void UpgradeSkill(SkillData? skill)
+        {
+            if (skill == null) return;
+            if (!_progression.SpendSkillPoint()) return;
+
+            skill.DamageMultiplier += BalanceConstants.SkillUpgradeDamageBonus;
+            _skillUpgrades[skill.Id] = _skillUpgrades.GetValueOrDefault(skill.Id) + 1;
+            SaveProgress();
+        }
+
+        private SkillData? ResolveSkillById(string id)
+        {
+            if (StrikeSkill?.Id == id) return StrikeSkill;
+            if (CrushSkill?.Id == id) return CrushSkill;
+            if (SpinSkill?.Id == id) return SpinSkill;
+            return null;
+        }
+
+        // ── 저장/불러오기 ─────────────────────────────────
+        private void SaveProgress()
+        {
+            if (_saveEnabled) SaveSystem.Save(BuildSaveData());
+        }
+
+        private SaveData BuildSaveData()
+        {
+            var d = new SaveData
+            {
+                Level = _stats.Level,
+                CurrentXp = _progression.CurrentXp,
+                UnspentStatPoints = _progression.UnspentStatPoints,
+                UnspentSkillPoints = _progression.UnspentSkillPoints,
+                Str = _stats.Attributes.Strength,
+                Dex = _stats.Attributes.Dexterity,
+                Vit = _stats.Attributes.Vitality,
+                Ene = _stats.Attributes.Energy,
+                EqBonusStrength = _stats.Equipment.BonusStrength,
+                EqFlatDefense = _stats.Equipment.FlatDefense,
+                EqFlatAttackRating = _stats.Equipment.FlatAttackRating,
+                EqFlatMaxHp = _stats.Equipment.FlatMaxHp,
+                EqFlatMinDamage = _stats.Equipment.FlatMinDamage,
+                EqFlatMaxDamage = _stats.Equipment.FlatMaxDamage,
+            };
+            foreach (var it in Inventory) d.InventoryItemIds.Add(it.Id);
+            foreach (var kv in _skillUpgrades) d.SkillUpgrades[kv.Key] = kv.Value;
+            return d;
+        }
+
+        private void ApplySaveData(SaveData d)
+        {
+            _stats.LoadState(d.Level,
+                new PrimaryAttributes(d.Str, d.Dex, d.Vit, d.Ene),
+                new EquipmentAggregate
+                {
+                    BonusStrength = d.EqBonusStrength,
+                    FlatDefense = d.EqFlatDefense,
+                    FlatAttackRating = d.EqFlatAttackRating,
+                    FlatMaxHp = d.EqFlatMaxHp,
+                    FlatMinDamage = d.EqFlatMinDamage,
+                    FlatMaxDamage = d.EqFlatMaxDamage,
+                });
+            _progression.LoadState(d.CurrentXp, d.UnspentStatPoints, d.UnspentSkillPoints);
+
+            Inventory.Clear();
+            foreach (var id in d.InventoryItemIds)
+            {
+                var item = LootTable.FindById(id);
+                if (item != null) Inventory.Add(item);
+            }
+
+            foreach (var kv in d.SkillUpgrades)
+            {
+                var skill = ResolveSkillById(kv.Key);
+                if (skill == null) continue;
+                skill.DamageMultiplier += BalanceConstants.SkillUpgradeDamageBonus * kv.Value;
+                _skillUpgrades[kv.Key] = kv.Value;
+            }
         }
 
         /// <summary>아이템 습득(M4 간소화): 목록에 추가 + 접사를 CombatStats.Equipment에 즉시 합산.</summary>
@@ -154,6 +269,7 @@ namespace ChaosOfAI.Actors
             _stats.Equipment = eq;
 
             _hud?.RefreshInventory(Inventory); // 인벤토리 패널(I) 갱신
+            SaveProgress();
         }
 
         // 화면 클릭 → 지면(y=0 평면) 교차점으로 이동 목표 설정(M0).

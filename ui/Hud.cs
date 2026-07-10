@@ -109,9 +109,9 @@ namespace ChaosOfAI.UI
         public void UpdateProgression(int level, int xp, int xpToNext, int statPoints, int skillPoints)
         {
             _levelLabel.Text = $"Lv.{level}  XP {xp}/{xpToNext}";
-            _statPointsLabel.Text = statPoints > 0
-                ? $"스탯 포인트 {statPoints} (4=STR 5=DEX 6=VIT 7=ENE) · 스킬 포인트 {skillPoints}"
-                : $"스킬 포인트 {skillPoints}";
+            string stat = statPoints > 0 ? $"스탯 포인트 {statPoints} (4=STR 5=DEX 6=VIT 7=ENE)" : "";
+            string skill = skillPoints > 0 ? $"스킬 포인트 {skillPoints} (8=강타 9=분쇄 0=회전격돌 강화)" : $"스킬 포인트 {skillPoints}";
+            _statPointsLabel.Text = string.IsNullOrEmpty(stat) ? skill : $"{stat} · {skill}";
         }
 
         private static string BuildHistoryText()
