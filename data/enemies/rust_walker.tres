@@ -17,6 +17,6 @@ AttackCooldown = 1.6
 AttackRange = 2.0
 DamageReduction = 0.1
 MoveSpeed = 2.0
-DetectionRange = 7.0
+DetectionRange = 20.0
 XpReward = 18
 DropChance = 0.3

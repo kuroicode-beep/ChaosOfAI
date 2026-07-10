@@ -20,11 +20,17 @@ namespace ChaosOfAI.Core
     public static class AppVersion
     {
         // 루트 VERSION 파일과 항상 일치시킨다.
-        public const string Current = "0.4.1";
+        public const string Current = "0.4.2";
 
         /// <summary>최신이 앞. 설정 → 업데이트 내역에서 그대로 노출.</summary>
         public static readonly IReadOnlyList<VersionEntry> History = new List<VersionEntry>
         {
+            new VersionEntry("0.4.2", "2026-07-10", new[]
+            {
+                "공격 피드백 추가: 스킬 발동 시 스윙 이펙트(전방/주위) + 효과음(휘두름·타격·레벨업).",
+                "적이 없어도 1/2/3 입력이 눈·귀로 확인되도록 개선.",
+                "몬스터 탐지 범위 확대(전부 덤벼옴). 실제 키 입력 시뮬레이션+스크린샷으로 발동 검증.",
+            }),
             new VersionEntry("0.4.1", "2026-07-10", new[]
             {
                 "치명 버그 수정: 카메라가 플레이어와 함께 회전해 화면이 붕괴되던 문제 → 회전 독립 추종.",

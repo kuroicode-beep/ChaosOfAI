@@ -25,8 +25,12 @@ namespace ChaosOfAI.Actors
         private const float ArriveDistance = 0.35f;
 
         private MeleeHitbox _hitbox = null!;
+        private MeshInstance3D _swingVfx = null!;
         private Camera3D? _camera;
         private readonly Random _rng = new();
+
+        // 효과음(합성 WAV). 외부 에셋 없이 손맛/입력 확인용.
+        private AudioStream? _sfxSwing, _sfxCrush, _sfxHit, _sfxLevel;
 
         private CombatStats _stats = null!;
         private PlayerProgression _progression = null!;
@@ -49,11 +53,15 @@ namespace ChaosOfAI.Actors
         public CombatStats Stats => _stats;
         public PlayerProgression Progression => _progression;
         public bool IsAlive => !_dead && (_stats?.IsAlive ?? true);
+        public bool IsAttacking => _activeSkill != null;      // 테스트/디버그: 스킬 발동 중인가
+        public bool SwingVisible => _swingVfx?.Visible ?? false;
 
         public override void _Ready()
         {
             AddToGroup("player"); // EnemyAI가 그룹으로 탐지(§ M2)
             _hitbox = GetNode<MeleeHitbox>("MeleeHitbox");
+            _swingVfx = GetNode<MeshInstance3D>("SwingVFX");
+            _swingVfx.Visible = false;
 
             _defaultRange = _hitbox.Range;
             _defaultConeHalfAngle = _hitbox.ConeHalfAngleDeg;
@@ -67,10 +75,43 @@ namespace ChaosOfAI.Actors
             CrushSkill ??= SkillLibrary.Crush();
             SpinSkill ??= SkillLibrary.Spin();
 
+            // 효과음 로드 + 레벨업 사운드 훅.
+            _sfxSwing = GD.Load<AudioStream>("res://assets/sfx/swing.wav");
+            _sfxCrush = GD.Load<AudioStream>("res://assets/sfx/crush.wav");
+            _sfxHit = GD.Load<AudioStream>("res://assets/sfx/hit.wav");
+            _sfxLevel = GD.Load<AudioStream>("res://assets/sfx/levelup.wav");
+            _progression.LeveledUp += _ => PlaySfx(_sfxLevel, -3f);
+
             // 카메라는 뷰포트의 활성 Camera3D(= Main의 CameraRig 자식)에서 가져온다.
             _camera = GetViewport().GetCamera3D();
             if (_camera != null)
                 CombatFeedback.Instance?.RegisterCamera(_camera);
+        }
+
+        // 일회성 효과음: 임시 플레이어를 만들어 재생 후 자동 해제(겹침 허용).
+        private void PlaySfx(AudioStream? stream, float volumeDb = 0f)
+        {
+            if (stream == null) return;
+            var p = new AudioStreamPlayer { Stream = stream, VolumeDb = volumeDb, Bus = "Master" };
+            AddChild(p);
+            p.Finished += p.QueueFree;
+            p.Play();
+        }
+
+        // 공격 스윙 이펙트 표시: 부채꼴은 전방, 회전 격돌은 주위로 크게.
+        private void ShowSwingVfx(SkillData skill)
+        {
+            if (skill.Targeting == SkillTargeting.RadialAoe)
+            {
+                _swingVfx.Position = new Vector3(0, 0.9f, 0);
+                _swingVfx.Scale = new Vector3(1.8f, 0.35f, 1.8f);
+            }
+            else
+            {
+                _swingVfx.Position = new Vector3(0, 0.9f, -1.3f);
+                _swingVfx.Scale = Vector3.One;
+            }
+            _swingVfx.Visible = true;
         }
 
         // 마우스 투영 등에서 카메라가 필요할 때 지연 획득(첫 프레임 타이밍 대비).
@@ -186,11 +227,13 @@ namespace ChaosOfAI.Actors
             float dt = (float)delta;
             _attackTimer += dt;
 
-            // 액티브 윈도 진입
+            // 액티브 윈도 진입 — 스윙 이펙트 + 휘두르는 소리(적이 없어도 입력 확인 가능).
             if (!_windowOpen && _attackTimer >= _activeSkill.ActiveWindowStart)
             {
                 _windowOpen = true;
                 _hitbox.BeginSwing();
+                ShowSwingVfx(_activeSkill);
+                PlaySfx(_sfxSwing, -2f);
             }
 
             // 윈도 동안 매 물리프레임 Strike(캐시로 다단히트 방지, spin류는 회전하며 여러 대상)
@@ -217,6 +260,7 @@ namespace ChaosOfAI.Actors
             {
                 _hitbox.EndSwing();
                 _windowOpen = false;
+                _swingVfx.Visible = false;
             }
 
             // 스킬 종료(윈도 끝 + 약간의 후딜)
@@ -251,6 +295,7 @@ namespace ChaosOfAI.Actors
             {
                 CombatFeedback.Instance?.HitStop(skill.HeavyHitStop || anyKill);
                 CombatFeedback.Instance?.Shake(anyKill ? 0.12f : 0.05f);
+                PlaySfx(skill.HeavyHitStop ? _sfxCrush : _sfxHit, 0f);
             }
         }
 
@@ -311,6 +356,7 @@ namespace ChaosOfAI.Actors
             _activeSkill = null;
             _windowOpen = false;
             _hitbox.EndSwing();
+            _swingVfx.Visible = false;
             Velocity = Vector3.Zero;
             CombatFeedback.Instance?.Shake(0.2f);
             (GetTree().GetFirstNodeInGroup("hud") as Hud)?.ShowDeath();
