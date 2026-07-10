@@ -17,10 +17,13 @@ namespace ChaosOfAI.Actors
         [Export] public SkillData? StrikeSkill;   // data/skills/strike.tres
         [Export] public SkillData? CrushSkill;    // data/skills/crush.tres
         [Export] public SkillData? SpinSkill;     // data/skills/spin.tres
-        [Export] public NodePath CameraPath = new();
 
-        // Godot 노드 참조는 _Ready()에서 GetNode로 확정 초기화됨(null! 관용구).
-        private NavigationAgent3D _nav = null!;
+        // 이동: 평평한 무장애물 아레나이므로 클릭 지점으로 직접 이동(내비게이션은 M5 던전에서 도입).
+        // (내비 경로점이 navmesh 높이(y>0)로 반환돼 XZ 방향이 0이 되던 버그 회피)
+        private Vector3 _moveTarget;
+        private bool _hasMoveTarget;
+        private const float ArriveDistance = 0.35f;
+
         private MeleeHitbox _hitbox = null!;
         private Camera3D? _camera;
         private readonly Random _rng = new();
@@ -50,10 +53,7 @@ namespace ChaosOfAI.Actors
         public override void _Ready()
         {
             AddToGroup("player"); // EnemyAI가 그룹으로 탐지(§ M2)
-            _nav = GetNode<NavigationAgent3D>("NavigationAgent3D");
             _hitbox = GetNode<MeleeHitbox>("MeleeHitbox");
-            if (CameraPath != null && !CameraPath.IsEmpty)
-                _camera = GetNode<Camera3D>(CameraPath);
 
             _defaultRange = _hitbox.Range;
             _defaultConeHalfAngle = _hitbox.ConeHalfAngleDeg;
@@ -67,9 +67,14 @@ namespace ChaosOfAI.Actors
             CrushSkill ??= SkillLibrary.Crush();
             SpinSkill ??= SkillLibrary.Spin();
 
+            // 카메라는 뷰포트의 활성 Camera3D(= Main의 CameraRig 자식)에서 가져온다.
+            _camera = GetViewport().GetCamera3D();
             if (_camera != null)
                 CombatFeedback.Instance?.RegisterCamera(_camera);
         }
+
+        // 마우스 투영 등에서 카메라가 필요할 때 지연 획득(첫 프레임 타이밍 대비).
+        private Camera3D? Cam => _camera ??= GetViewport().GetCamera3D();
 
         public override void _UnhandledInput(InputEvent @event)
         {
@@ -111,9 +116,16 @@ namespace ChaosOfAI.Actors
         // 화면 클릭 → 지면(y=0 평면) 교차점으로 이동 목표 설정(M0).
         private void MoveToMouse()
         {
-            if (_camera == null) return;
             if (TryProjectMouseToGround(out Vector3 target))
-                _nav.TargetPosition = target;
+                MoveTo(target);
+        }
+
+        /// <summary>지면 목표 지점으로 이동 지시(클릭 이동 + 테스트에서 사용).</summary>
+        public void MoveTo(Vector3 groundPos)
+        {
+            groundPos.Y = 0f;
+            _moveTarget = groundPos;
+            _hasMoveTarget = true;
         }
 
         public override void _PhysicsProcess(double delta)
@@ -130,19 +142,23 @@ namespace ChaosOfAI.Actors
             bool rooted = _windowOpen && (_activeSkill == null || !_activeSkill.AllowMoveWhileActive);
             if (rooted) { Velocity = Vector3.Zero; MoveAndSlide(); return; }
 
-            if (_nav.IsNavigationFinished()) { Velocity = Vector3.Zero; MoveAndSlide(); return; }
+            if (!_hasMoveTarget) { Velocity = Vector3.Zero; MoveAndSlide(); return; }
 
-            Vector3 next = _nav.GetNextPathPosition();
-            Vector3 dir = (next - GlobalPosition);
-            dir.Y = 0;
-            if (dir.LengthSquared() > 0.0001f)
+            Vector3 to = _moveTarget - GlobalPosition;
+            to.Y = 0;
+            if (to.Length() <= ArriveDistance)
             {
-                dir = dir.Normalized();
-                Velocity = dir * MoveSpeed;
-                // 이동하며 지속 스킬은 이동 방향을 바라보고, 일반 공격은 타격 방향 유지.
-                if (!_windowOpen || (_activeSkill?.AllowMoveWhileActive ?? false))
-                    FaceDirection(dir);
+                _hasMoveTarget = false;
+                Velocity = Vector3.Zero;
+                MoveAndSlide();
+                return;
             }
+
+            Vector3 dir = to.Normalized();
+            Velocity = dir * MoveSpeed;
+            // 이동하며 지속 스킬은 이동 방향을 바라보고, 일반 공격은 타격 방향 유지.
+            if (!_windowOpen || (_activeSkill?.AllowMoveWhileActive ?? false))
+                FaceDirection(dir);
             MoveAndSlide();
         }
 
@@ -252,10 +268,11 @@ namespace ChaosOfAI.Actors
         private bool TryProjectMouseToGround(out Vector3 hit)
         {
             hit = Vector3.Zero;
-            if (_camera == null) return false;
+            Camera3D? cam = Cam;
+            if (cam == null) return false;
             Vector2 mouse = GetViewport().GetMousePosition();
-            Vector3 from = _camera.ProjectRayOrigin(mouse);
-            Vector3 dir = _camera.ProjectRayNormal(mouse);
+            Vector3 from = cam.ProjectRayOrigin(mouse);
+            Vector3 dir = cam.ProjectRayNormal(mouse);
             if (Mathf.IsZeroApprox(dir.Y)) return false;
             float t = -from.Y / dir.Y;
             if (t < 0) return false;

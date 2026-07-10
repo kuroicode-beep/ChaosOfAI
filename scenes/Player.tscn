@@ -1,4 +1,4 @@
-[gd_scene load_steps=10 format=3]
+[gd_scene load_steps=9 format=3]
 
 [ext_resource type="Script" path="res://scripts/actors/Player.cs" id="1"]
 [ext_resource type="Script" path="res://scripts/combat/MeleeHitbox.cs" id="2"]
@@ -26,6 +26,7 @@ rim = 0.6
 radius = 2.5
 
 ; 격투가 플레이어. §6 아트 방향: 밝은 명도 + 림라이트로 어두운 배경에서 항상 떠 보이게(임시 캡슐 메시).
+; 카메라는 이 노드의 자식이 아니다(회전 독립). Main의 CameraRig가 위치만 추종한다.
 [node name="Player" type="CharacterBody3D"]
 collision_layer = 2
 collision_mask = 5
@@ -33,7 +34,6 @@ script = ExtResource("1")
 StrikeSkill = ExtResource("3")
 CrushSkill = ExtResource("4")
 SpinSkill = ExtResource("5")
-CameraPath = NodePath("Camera3D")
 
 [node name="CollisionShape3D" type="CollisionShape3D" parent="."]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.9, 0)
@@ -44,9 +44,14 @@ transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.9, 0)
 mesh = SubResource("CapsuleMesh_body")
 surface_material_override/0 = SubResource("StandardMaterial3D_body")
 
+; 정면 표시용 작은 마커(부채꼴 방향 가독성). 캡슐 앞쪽에 돌출.
+[node name="FacingMarker" type="MeshInstance3D" parent="MeshInstance3D"]
+transform = Transform3D(0.25, 0, 0, 0, 0.25, 0, 0, 0, 0.5, 0, 0, -0.5)
+mesh = SubResource("CapsuleMesh_body")
+
 [node name="NavigationAgent3D" type="NavigationAgent3D" parent="."]
 path_desired_distance = 0.3
-target_desired_distance = 0.3
+target_desired_distance = 0.5
 avoidance_enabled = false
 
 ; 부채꼴 히트박스(§4.1): 광역 구 감지 + 코드 각도 필터. enemy(layer 3=value4) 마스크만 감지.
@@ -59,11 +64,3 @@ script = ExtResource("2")
 [node name="CollisionShape3D" type="CollisionShape3D" parent="MeleeHitbox"]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.9, 0)
 shape = SubResource("SphereShape3D_hitbox")
-
-; 등각 카메라(§6 디아2식 탑다운 쿼터뷰). 정면 요(yaw) 회전 없이 -45° 피치 — 아트 단계에서 45° 요 추가 검토.
-[node name="Camera3D" type="Camera3D" parent="."]
-transform = Transform3D(1, 0, 0, 0, 0.7071068, 0.7071068, 0, -0.7071068, 0.7071068, 0, 10, 10)
-current = true
-projection = 1
-size = 14.0
-far = 100.0

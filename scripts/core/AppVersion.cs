@@ -20,11 +20,17 @@ namespace ChaosOfAI.Core
     public static class AppVersion
     {
         // 루트 VERSION 파일과 항상 일치시킨다.
-        public const string Current = "0.4.0";
+        public const string Current = "0.4.1";
 
         /// <summary>최신이 앞. 설정 → 업데이트 내역에서 그대로 노출.</summary>
         public static readonly IReadOnlyList<VersionEntry> History = new List<VersionEntry>
         {
+            new VersionEntry("0.4.1", "2026-07-10", new[]
+            {
+                "치명 버그 수정: 카메라가 플레이어와 함께 회전해 화면이 붕괴되던 문제 → 회전 독립 추종.",
+                "이동 불능 수정: navmesh 높이 차로 경로가 멈추던 문제 → 평지 직접 이동으로 전환(플레이어·몬스터).",
+                "실제 창 렌더 확인(스크린샷) + 이동 회귀 테스트(MovementTest) 추가.",
+            }),
             new VersionEntry("0.4.0", "2026-07-10", new[]
             {
                 "검수 지적 5건 수정: 플레이어 사망 처리(R키 재시작), 회전 격돌 이동+다단타.",

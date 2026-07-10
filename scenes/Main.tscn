@@ -1,10 +1,11 @@
-[gd_scene load_steps=10 format=3]
+[gd_scene load_steps=11 format=3]
 
 [ext_resource type="Script" path="res://scripts/core/MainBootstrap.cs" id="1"]
 [ext_resource type="PackedScene" path="res://scenes/Player.tscn" id="2"]
 [ext_resource type="PackedScene" path="res://scenes/Enemy.tscn" id="3"]
 [ext_resource type="PackedScene" path="res://ui/Hud.tscn" id="4"]
 [ext_resource type="Resource" path="res://data/enemies/rust_walker.tres" id="5"]
+[ext_resource type="Script" path="res://scripts/core/CameraFollow.cs" id="6"]
 
 [sub_resource type="Environment" id="Environment_dark"]
 background_mode = 1
@@ -36,6 +37,17 @@ shadow_enabled = true
 
 [node name="WorldEnvironment" type="WorldEnvironment" parent="."]
 environment = SubResource("Environment_dark")
+
+; 등각 카메라: 플레이어를 고정 오프셋으로 추종 + LookAt(회전 독립). 약 53° 부감.
+[node name="Camera3D" type="Camera3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 16, 12)
+current = true
+projection = 1
+size = 22.0
+near = 0.1
+far = 200.0
+script = ExtResource("6")
+TargetPath = NodePath("../Player")
 
 [node name="NavigationRegion3D" type="NavigationRegion3D" parent="."]
 

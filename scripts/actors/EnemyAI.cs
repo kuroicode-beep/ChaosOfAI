@@ -21,7 +21,6 @@ namespace ChaosOfAI.Actors
 
         private CombatStats _stats = null!;
         private EnemyData _data = null!; // Data 또는 기본값으로 _Ready에서 확정
-        private NavigationAgent3D? _nav;
         private MeleeHitbox? _hitbox;
         private Node3D? _player;
         private readonly Random _rng = new();
@@ -44,7 +43,6 @@ namespace ChaosOfAI.Actors
                 GD.PushWarning($"EnemyAI({Name}): EnemyData 미할당 — 기본값으로 대체.");
 
             _stats = _data.CreateStats();
-            _nav = GetNodeOrNull<NavigationAgent3D>("NavigationAgent3D");
             _hitbox = GetNodeOrNull<MeleeHitbox>("MeleeHitbox");
 
             _player = ResolvePlayer();
@@ -160,32 +158,15 @@ namespace ChaosOfAI.Actors
             }
         }
 
+        // 평평한 무장애물 아레나이므로 플레이어를 향해 직선 추격(내비게이션은 M5 던전에서 도입).
         private void ChaseStep(float dt)
         {
-            if (_nav == null)
+            Vector3 dir = (_player!.GlobalPosition - GlobalPosition); dir.Y = 0;
+            if (dir.LengthSquared() > 0.0001f)
             {
-                // NavigationAgent3D 미배치 시 직선 추격 폴백.
-                Vector3 dir = (_player!.GlobalPosition - GlobalPosition); dir.Y = 0;
-                if (dir.LengthSquared() > 0.0001f)
-                {
-                    dir = dir.Normalized();
-                    Velocity = dir * _data.MoveSpeed;
-                    FaceDirection(dir);
-                }
-                MoveAndSlide();
-                return;
-            }
-
-            _nav.TargetPosition = _player!.GlobalPosition;
-            if (_nav.IsNavigationFinished()) { Velocity = Vector3.Zero; MoveAndSlide(); return; }
-
-            Vector3 next = _nav.GetNextPathPosition();
-            Vector3 navDir = (next - GlobalPosition); navDir.Y = 0;
-            if (navDir.LengthSquared() > 0.0001f)
-            {
-                navDir = navDir.Normalized();
-                Velocity = navDir * _data.MoveSpeed;
-                FaceDirection(navDir);
+                dir = dir.Normalized();
+                Velocity = dir * _data.MoveSpeed;
+                FaceDirection(dir);
             }
             MoveAndSlide();
         }

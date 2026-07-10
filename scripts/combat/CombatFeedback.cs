@@ -12,10 +12,11 @@ namespace ChaosOfAI.Combat
         public static CombatFeedback? Instance { get; private set; }
 
         // 카메라 셰이크 대상은 활성 카메라가 등록. Player가 시작 시 등록.
+        // 셰이크는 Position이 아니라 HOffset/VOffset(프러스텀 오프셋)으로 처리 →
+        // CameraFollow가 매 프레임 Position/LookAt을 갱신해도 충돌하지 않는다.
         private Camera3D? _camera;
         private float _shakeAmount;
         private float _shakeDecay = 8f;
-        private Vector3 _cameraBasePos;
 
         // 히트스톱: 벽시계(TimeScale 비의존) 종료 시각으로 관리 → async 경합 없이 다중 처치 안전.
         private bool _hitStopActive;
@@ -30,7 +31,6 @@ namespace ChaosOfAI.Combat
         public void RegisterCamera(Camera3D? cam)
         {
             _camera = cam;
-            if (cam != null) _cameraBasePos = cam.Position;
         }
 
         /// <summary>히트스톱: 잠깐 게임 시간 정지 → 묵직함. heavy=강타/처치용 긴 정지.
@@ -60,15 +60,17 @@ namespace ChaosOfAI.Combat
                 Engine.TimeScale = 1f;
             }
 
-            if (_camera == null || _shakeAmount <= 0.001f) return;
+            if (_camera == null) return;
+            if (_shakeAmount <= 0.001f)
+            {
+                if (_camera.HOffset != 0f || _camera.VOffset != 0f)
+                { _camera.HOffset = 0f; _camera.VOffset = 0f; }
+                return;
+            }
             float a = _shakeAmount;
-            var offset = new Vector3(
-                (float)GD.RandRange(-a, a),
-                (float)GD.RandRange(-a, a),
-                0f);
-            _camera.Position = _cameraBasePos + offset;
+            _camera.HOffset = (float)GD.RandRange(-a, a);
+            _camera.VOffset = (float)GD.RandRange(-a, a);
             _shakeAmount = Mathf.Lerp(_shakeAmount, 0f, (float)delta * _shakeDecay);
-            if (_shakeAmount <= 0.001f) _camera.Position = _cameraBasePos;
         }
     }
 }
