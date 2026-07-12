@@ -20,11 +20,16 @@ namespace ChaosOfAI.Core
     public static class AppVersion
     {
         // 루트 VERSION 파일과 항상 일치시킨다.
-        public const string Current = "0.9.0";
+        public const string Current = "0.9.1";
 
         /// <summary>최신이 앞. 설정 → 업데이트 내역에서 그대로 노출.</summary>
         public static readonly IReadOnlyList<VersionEntry> History = new List<VersionEntry>
         {
+            new VersionEntry("0.9.1", "2026-07-12", new[]
+            {
+                "벽-배경 가독성 개선: 벽 색상을 훨씬 밝게 + 카툰풍 검은 외곽선(인버티드 헐 셰이더) 추가.",
+                "조명·색상과 무관하게 벽 윤곽이 항상 보이도록 처리(§6 접근성: 배경-오브젝트 구분).",
+            }),
             new VersionEntry("0.9.0", "2026-07-10", new[]
             {
                 "몬스터 사망 연출: 아트 자산 없이 코드만으로 축소+페이드아웃 후 소멸(즉시 QueueFree 대신).",

@@ -49,15 +49,23 @@ namespace ChaosOfAI.Core
             BuildFloor(cols, rows, origin);
 
             var wallMesh = new BoxMesh { Size = new Vector3(Cell, WallHeight, Cell) };
+            // 바닥(0.07,0.07,0.09)과 확실히 구분되도록 벽은 훨씬 밝게 + 네온 엣지 발광 강화(§6 가독성).
             var wallMat = new StandardMaterial3D
             {
-                AlbedoColor = new Color(0.12f, 0.13f, 0.17f),
+                AlbedoColor = new Color(0.32f, 0.35f, 0.42f),
                 EmissionEnabled = true,
-                Emission = new Color(0.05f, 0.25f, 0.35f),
-                EmissionEnergyMultiplier = 0.35f, // 폐허 네온 느낌의 약한 윤곽광(§6 가독성)
-                Roughness = 0.85f,
+                Emission = new Color(0.1f, 0.55f, 0.75f),
+                EmissionEnergyMultiplier = 0.7f,
+                Roughness = 0.75f,
             };
             var wallShape = new BoxShape3D { Size = new Vector3(Cell, WallHeight, Cell) };
+
+            // 외곽선(인버티드 헐): 카툰 스타일 검은 테두리 — 밝은 벽/어두운 바닥 어느 쪽과도
+            // 확실히 대비돼 조명·색상과 무관하게 항상 벽의 윤곽을 읽을 수 있게 한다(§6).
+            var outlineShader = GD.Load<Shader>("res://assets/shaders/outline.gdshader");
+            var outlineMat = new ShaderMaterial { Shader = outlineShader };
+            outlineMat.SetShaderParameter("outline_color", new Color(0.01f, 0.01f, 0.02f));
+            outlineMat.SetShaderParameter("outline_width", 0.10f);
 
             Node3D? playerStart = null;
             for (int r = 0; r < rows; r++)
@@ -70,7 +78,7 @@ namespace ChaosOfAI.Core
                     switch (ch)
                     {
                         case '#':
-                            AddWall(pos, wallMesh, wallMat, wallShape);
+                            AddWall(pos, wallMesh, wallMat, wallShape, outlineMat);
                             break;
                         case 'P':
                             playerStart = SpawnPlayer(pos);
@@ -119,12 +127,14 @@ namespace ChaosOfAI.Core
             AddChild(floor);
         }
 
-        private void AddWall(Vector3 pos, BoxMesh mesh, StandardMaterial3D mat, BoxShape3D shape)
+        private void AddWall(Vector3 pos, BoxMesh mesh, StandardMaterial3D mat, BoxShape3D shape, ShaderMaterial outlineMat)
         {
             var body = new StaticBody3D { CollisionLayer = 1, CollisionMask = 0 };
             body.Position = pos + new Vector3(0, WallHeight * 0.5f, 0);
             body.AddChild(new CollisionShape3D { Shape = shape });
             body.AddChild(new MeshInstance3D { Mesh = mesh, MaterialOverride = mat });
+            // 외곽선: 같은 메시를 인버티드 헐 셰이더로 한 번 더(§6 배경-벽 구분 가독성).
+            body.AddChild(new MeshInstance3D { Mesh = mesh, MaterialOverride = outlineMat });
             AddChild(body);
         }
 
