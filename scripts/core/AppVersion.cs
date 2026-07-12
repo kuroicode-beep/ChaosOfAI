@@ -20,11 +20,17 @@ namespace ChaosOfAI.Core
     public static class AppVersion
     {
         // 루트 VERSION 파일과 항상 일치시킨다.
-        public const string Current = "0.8.0";
+        public const string Current = "0.9.0";
 
         /// <summary>최신이 앞. 설정 → 업데이트 내역에서 그대로 노출.</summary>
         public static readonly IReadOnlyList<VersionEntry> History = new List<VersionEntry>
         {
+            new VersionEntry("0.9.0", "2026-07-10", new[]
+            {
+                "몬스터 사망 연출: 아트 자산 없이 코드만으로 축소+페이드아웃 후 소멸(즉시 QueueFree 대신).",
+                "아이템 습득 사운드 추가(합성 SFX).",
+                "죽음 연출 지연을 반영해 회귀 테스트 타이밍 보정, 9종 전부 통과 유지.",
+            }),
             new VersionEntry("0.8.0", "2026-07-10", new[]
             {
                 "바닥 드랍 픽업(§5.4): 처치 즉시 적용 대신 바닥에 아이템이 떨어지고 걸어가 습득.",

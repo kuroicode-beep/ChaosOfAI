@@ -76,11 +76,14 @@ namespace ChaosOfAI.Tests
             }
 
             _framesSinceKill++;
-            if (_framesSinceKill < 2) return; // QueueFree가 프레임 말미에 처리되도록 한 프레임 대기
+            // Die()는 즉시 QueueFree하지 않고 축소·페이드 연출(DeathFadeSeconds≈0.35s) 후 지운다.
+            // 그 사이엔 State==Dead로 "죽었다"를 판단하고, 넉넉히 기다린 뒤 실제 노드 해제까지 확인.
+            if (_framesSinceKill < 30) return;
 
+            bool enemyDied = !IsInstanceValid(_enemy) || _enemy.State == EnemyState.Dead;
             bool enemyFreed = !IsInstanceValid(_enemy);
             bool xpGranted = _player.Progression.CurrentXp > 0 || _player.Stats.Level > 1;
-            bool pass = enemyFreed && xpGranted;
+            bool pass = enemyDied && enemyFreed && xpGranted;
 
             Finish(pass, $"enemyFreed={enemyFreed} xp={_player.Progression.CurrentXp} level={_player.Stats.Level} inv={_player.Inventory.Count}");
         }

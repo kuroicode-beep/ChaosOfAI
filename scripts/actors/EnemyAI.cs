@@ -22,6 +22,8 @@ namespace ChaosOfAI.Actors
         private CombatStats _stats = null!;
         private EnemyData _data = null!; // Data 또는 기본값으로 _Ready에서 확정
         private MeleeHitbox? _hitbox;
+        private MeshInstance3D? _mesh;
+        private CollisionShape3D? _collisionShape;
 
         // 피격 발광(§4.3 flinch): 명중 시 잠깐 밝게 번쩍. 머티리얼은 인스턴스별 복제.
         private StandardMaterial3D? _mat;
@@ -29,6 +31,7 @@ namespace ChaosOfAI.Actors
         private float _baseEmissionEnergy;
         private float _flashTimer;
         private const float FlashSeconds = 0.12f;
+        private const float DeathFadeSeconds = 0.35f; // 사망 연출(아트 없이 코드만으로): 축소+페이드
         private Node3D? _player;
         private readonly Random _rng = new();
 
@@ -51,13 +54,15 @@ namespace ChaosOfAI.Actors
 
             _stats = _data.CreateStats();
             _hitbox = GetNodeOrNull<MeleeHitbox>("MeleeHitbox");
+            _mesh = GetNodeOrNull<MeshInstance3D>("MeshInstance3D");
+            _collisionShape = GetNodeOrNull<CollisionShape3D>("CollisionShape3D");
 
             // 피격 발광용 머티리얼 복제(다른 개체와 공유되지 않게).
-            var mesh = GetNodeOrNull<MeshInstance3D>("MeshInstance3D");
-            if (mesh?.GetSurfaceOverrideMaterial(0) is StandardMaterial3D shared)
+            if (_mesh?.GetSurfaceOverrideMaterial(0) is StandardMaterial3D shared)
             {
                 _mat = (StandardMaterial3D)shared.Duplicate();
-                mesh.SetSurfaceOverrideMaterial(0, _mat);
+                _mat.Transparency = BaseMaterial3D.TransparencyEnum.Alpha; // 사망 페이드용 알파 지원
+                _mesh.SetSurfaceOverrideMaterial(0, _mat);
                 _baseEmission = _mat.Emission;
                 _baseEmissionEnergy = _mat.EmissionEnergyMultiplier;
             }
@@ -98,7 +103,8 @@ namespace ChaosOfAI.Actors
             // 피격 시 즉시 추격 전환(먼저 때리면 반응하도록)
             if (State == EnemyState.Idle) State = EnemyState.Chase;
 
-            // TODO(Sonnet): flinch 애니메이션 + 피격 발광(아트 자산 필요).
+            // flinch 애니메이션은 아트 자산(스켈레톤/애니메이션 클립) 필요 — 그레이박스 단계에서는
+            // 피격 발광(StartHitFlash, 위)과 넉백으로 타격감을 대신한다.
 
             if (!_stats.IsAlive)
                 Die();
@@ -108,9 +114,21 @@ namespace ChaosOfAI.Actors
         {
             State = EnemyState.Dead;
             EmitSignal(SignalName.Died);
-            GrantRewardsToPlayer(); // 경험치는 즉시, 드랍은 바닥에 스폰(§5.4/§5.5 걸어가서 습득)
-            // TODO(Sonnet): 사망 연출(아트 자산 필요).
-            QueueFree();
+            GrantRewardsToPlayer(); // 경험치·드랍은 즉시 지급(연출과 무관하게 판정은 바로 확정)
+
+            // 사망 연출(아트 자산 없이 코드만으로): 충돌 즉시 해제 + 축소·페이드아웃 후 QueueFree.
+            // 정식 사망 애니메이션(§ 아트 패스)으로 교체 시 이 블록만 바꾸면 됨.
+            if (_collisionShape != null) _collisionShape.Disabled = true;
+            SetPhysicsProcess(false);
+
+            var tween = CreateTween();
+            tween.SetParallel(true);
+            if (_mesh != null)
+                tween.TweenProperty(_mesh, "scale", Vector3.Zero, DeathFadeSeconds)
+                    .SetTrans(Tween.TransitionType.Cubic).SetEase(Tween.EaseType.In);
+            if (_mat != null)
+                tween.TweenProperty(_mat, "albedo_color:a", 0f, DeathFadeSeconds);
+            tween.Chain().TweenCallback(Callable.From(QueueFree));
         }
 
         private void GrantRewardsToPlayer()
